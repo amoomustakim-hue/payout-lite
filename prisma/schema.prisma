@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionSource {
+  INVOICE
+  WEBSITE_BUTTON
+  SHOP_QR
+  UNIQUE_ACCOUNT
+}
+
+enum TransactionStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  UNPAID
+  PENDING
+  PAID
+  FAILED
+  OVERDUE
+  CANCELLED
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  businesses Business[]
+}
+
+model Business {
+  id                String           @id @default(cuid())
+  userId            String
+  name              String
+  slug              String           @unique
+  email             String?
+  phone             String?
+  nombaSubAccountId String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices          Invoice[]
+  paymentButtons    PaymentButton[]
+  virtualAccounts   VirtualAccount[]
+  transactions      Transaction[]
+  aiInsights        AiInsight[]
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  businessId    String
+  customerName  String
+  customerEmail String
+  amount        Decimal       @db.Decimal(12, 2)
+  currency      String        @default("NGN")
+  description   String?
+  dueDate       DateTime?
+  status        InvoiceStatus @default(UNPAID)
+  paymentUrl    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  business      Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+}
+
+model PaymentButton {
+  id           String        @id @default(cuid())
+  businessId   String
+  label        String        @default("Pay with Payout Lite")
+  description  String?
+  amount       Decimal?      @db.Decimal(12, 2)
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+model VirtualAccount {
+  id             String        @id @default(cuid())
+  businessId     String
+  providerRef    String?       @unique
+  accountNumber  String
+  bankName       String
+  accountName    String
+  active         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  business       Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+}
+
+model Transaction {
+  id                String            @id @default(cuid())
+  businessId        String
+  invoiceId         String?
+  paymentButtonId   String?
+  virtualAccountId  String?
+  source            TransactionSource
+  status            TransactionStatus @default(PENDING)
+  amount            Decimal           @db.Decimal(12, 2)
+  currency          String            @default("NGN")
+  customerName      String?
+  customerEmail     String?
+  reference         String            @unique
+  providerReference String?
+  checkoutUrl       String?
+  paidAt            DateTime?
+  metadata          Json?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  business          Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoice           Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  paymentButton     PaymentButton?    @relation(fields: [paymentButtonId], references: [id], onDelete: SetNull)
+  virtualAccount    VirtualAccount?   @relation(fields: [virtualAccountId], references: [id], onDelete: SetNull)
+  webhookEvents     WebhookEvent[]
+}
+
+model WebhookEvent {
+  id               String       @id @default(cuid())
+  transactionId    String?
+  providerEventId  String?      @unique
+  eventType        String
+  paymentReference String?
+  signatureValid   Boolean      @default(false)
+  payload          Json
+  processedAt      DateTime?
+  createdAt        DateTime     @default(now())
+  transaction      Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+}
+
+model AiInsight {
+  id         String   @id @default(cuid())
+  businessId String
+  question   String
+  answer     String
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
