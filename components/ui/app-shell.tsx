@@ -19,6 +19,7 @@ import {
   Menu,
 } from "lucide-react";
 import { useState } from "react";
+import { UserButton } from "@clerk/nextjs";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -158,10 +159,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Create Invoice
             </Link>
 
-            {/* Avatar */}
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-600">
-              A
-            </div>
+            {/* User */}
+            <UserButton />
           </div>
         </header>
 

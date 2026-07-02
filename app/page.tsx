@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
 import {
   FileText,
   Globe,
@@ -56,7 +57,10 @@ const highlights = [
   "Prisma-backed transaction history",
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { userId } = await auth();
+  const isSignedIn = Boolean(userId);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Nav */}
@@ -69,18 +73,29 @@ export default function HomePage() {
             <span className="text-sm font-black text-[var(--foreground)]">Payout Lite</span>
           </Link>
           <div className="flex items-center gap-3">
-            <Link
-              href="/sign-in"
-              className="text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)]"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/dashboard"
-              className="rounded-lg bg-[var(--payout-blue)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--payout-blue-dark)]"
-            >
-              Open dashboard
-            </Link>
+            {isSignedIn ? (
+              <Link
+                href="/dashboard"
+                className="rounded-lg bg-[var(--payout-blue)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--payout-blue-dark)]"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/sign-in"
+                  className="text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)]"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="rounded-lg bg-[var(--payout-blue)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--payout-blue-dark)]"
+                >
+                  Get started
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -100,19 +115,31 @@ export default function HomePage() {
             Payout Lite is a clean payment hub for small Nigerian businesses — invoices, QR payments, website buttons, and virtual accounts, all confirmed by Nomba webhooks.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 rounded-lg bg-[var(--payout-blue)] px-6 py-3 font-semibold text-white transition hover:bg-[var(--payout-blue-dark)]"
-            >
-              Open dashboard
-              <ArrowRight size={16} />
-            </Link>
-            <Link
-              href="/onboarding"
-              className="rounded-lg border border-[var(--border)] bg-white px-6 py-3 font-semibold text-[var(--foreground)] transition hover:bg-slate-50"
-            >
-              Create business
-            </Link>
+            {isSignedIn ? (
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 rounded-lg bg-[var(--payout-blue)] px-6 py-3 font-semibold text-white transition hover:bg-[var(--payout-blue-dark)]"
+              >
+                Go to dashboard
+                <ArrowRight size={16} />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/sign-up"
+                  className="flex items-center gap-2 rounded-lg bg-[var(--payout-blue)] px-6 py-3 font-semibold text-white transition hover:bg-[var(--payout-blue-dark)]"
+                >
+                  Get started free
+                  <ArrowRight size={16} />
+                </Link>
+                <Link
+                  href="/sign-in"
+                  className="rounded-lg border border-[var(--border)] bg-white px-6 py-3 font-semibold text-[var(--foreground)] transition hover:bg-slate-50"
+                >
+                  Sign in
+                </Link>
+              </>
+            )}
           </div>
           <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2">
             {highlights.map((item) => (

@@ -11,6 +11,7 @@
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.5.12",
     "@prisma/client": "^6.16.2",
     "clsx": "^2.1.1",
     "groq-sdk": "^0.30.0",
