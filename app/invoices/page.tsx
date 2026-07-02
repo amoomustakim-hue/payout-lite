@@ -1,10 +1,14 @@
 import { InvoiceStatus } from "@prisma/client";
+import { FileText, Plus, Send, Link2, BarChart3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { CustomerAvatar } from "@/components/ui/customer-avatar";
 import { CopyInvoiceLink } from "@/components/invoices/copy-invoice-link";
 import { createInvoiceAction } from "@/app/invoices/actions";
 import { formatNaira } from "@/lib/format";
@@ -27,160 +31,247 @@ type InvoiceRow = {
 type InvoiceState = {
   invoices: InvoiceRow[];
   databaseReady: boolean;
-  setupMessage?: string;
 };
 
 async function getInvoices(): Promise<InvoiceState> {
   if (!hasDatabaseUrl()) {
-    return {
-      databaseReady: false,
-      invoices: [],
-      setupMessage: "Database connection is not available yet. Add DATABASE_URL and redeploy.",
-    };
+    return { databaseReady: false, invoices: [] };
   }
-
   try {
     const invoices = await getDb().invoice.findMany({
       orderBy: { createdAt: "desc" },
       take: 25,
     });
-
     return {
       databaseReady: true,
-      invoices: invoices.map((invoice) => ({
-        ...invoice,
-        amount: invoice.amount.toString(),
-      })),
+      invoices: invoices.map((inv) => ({ ...inv, amount: inv.amount.toString() })),
     };
   } catch {
-    return {
-      databaseReady: false,
-      invoices: [],
-      setupMessage: "Database connection is not available yet. Add DATABASE_URL and redeploy.",
-    };
+    return { databaseReady: false, invoices: [] };
   }
 }
 
 function InvoiceForm({ databaseReady }: { databaseReady: boolean }) {
-  const content = (
+  const fields = (
     <>
-      <div className="grid gap-2">
-        <Label htmlFor="customerName">Customer name</Label>
-        <Input id="customerName" name="customerName" placeholder="Ada Johnson" required disabled={!databaseReady} />
+      <div className="grid gap-1.5">
+        <Label htmlFor="customerName">Customer Name</Label>
+        <Input
+          id="customerName"
+          name="customerName"
+          placeholder="e.g. Ada Johnson"
+          required
+          disabled={!databaseReady}
+        />
       </div>
-      <div className="grid gap-2">
-        <Label htmlFor="customerEmail">Customer email</Label>
-        <Input id="customerEmail" name="customerEmail" placeholder="ada@example.com" type="email" required disabled={!databaseReady} />
+      <div className="grid gap-1.5">
+        <Label htmlFor="customerEmail">Email Address</Label>
+        <Input
+          id="customerEmail"
+          name="customerEmail"
+          placeholder="ada@example.com"
+          type="email"
+          required
+          disabled={!databaseReady}
+        />
       </div>
-      <div className="grid gap-2">
-        <Label htmlFor="amount">Amount</Label>
-        <Input id="amount" name="amount" placeholder="120000" min="1" step="0.01" type="number" required disabled={!databaseReady} />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="amount">Amount (₦)</Label>
+          <Input
+            id="amount"
+            name="amount"
+            placeholder="0.00"
+            min="1"
+            step="0.01"
+            type="number"
+            required
+            disabled={!databaseReady}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="dueDate">Due Date</Label>
+          <Input
+            id="dueDate"
+            name="dueDate"
+            type="date"
+            disabled={!databaseReady}
+          />
+        </div>
       </div>
-      <div className="grid gap-2">
+      <div className="grid gap-1.5">
         <Label htmlFor="description">Description</Label>
-        <Textarea id="description" name="description" className="min-h-24" placeholder="Goods supplied for March" required disabled={!databaseReady} />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="dueDate">Due date</Label>
-        <Input id="dueDate" name="dueDate" type="date" disabled={!databaseReady} />
+        <Textarea
+          id="description"
+          name="description"
+          className="min-h-20"
+          placeholder="What is this payment for?"
+          required
+          disabled={!databaseReady}
+        />
       </div>
       <button
-        className="rounded-xl bg-[var(--payout-blue)] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(33,107,255,0.24)] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+        className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--payout-blue)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--payout-blue-dark)] disabled:cursor-not-allowed disabled:bg-slate-300"
         disabled={!databaseReady}
         type="submit"
       >
-        {databaseReady ? "Create invoice" : "Database unavailable"}
+        <Plus size={16} />
+        {databaseReady ? "Create Invoice" : "Database unavailable"}
       </button>
     </>
   );
 
   if (!databaseReady) {
-    return <div className="grid gap-4 opacity-75">{content}</div>;
+    return <div className="grid gap-4 opacity-60">{fields}</div>;
   }
 
-  return <form action={createInvoiceAction} className="grid gap-4">{content}</form>;
+  return (
+    <form action={createInvoiceAction} id="create-invoice" className="grid gap-4">
+      {fields}
+    </form>
+  );
 }
 
+const quickActions = [
+  { icon: Send, label: "Send Reminder", description: "Nudge customers with unpaid invoices automatically via SMS or Email.", color: "bg-[var(--payout-blue)]", textColor: "text-white", descColor: "text-blue-100" },
+  { icon: Link2, label: "Payment Links", description: "Generate a direct link to a hosted checkout page for any amount.", color: "bg-white", textColor: "text-[var(--foreground)]", descColor: "text-[var(--muted)]" },
+  { icon: BarChart3, label: "Revenue Insights", description: "Track your growth with detailed reports on paid vs pending invoices.", color: "bg-white", textColor: "text-[var(--foreground)]", descColor: "text-[var(--muted)]" },
+];
+
 export default async function InvoicesPage() {
-  const { invoices, databaseReady, setupMessage } = await getInvoices();
+  const { invoices, databaseReady } = await getInvoices();
 
   return (
-    <main className="mx-auto max-w-7xl px-5 py-8">
-      <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--payout-blue)]">Payout Lite</p>
-          <h1 className="mt-2 text-3xl font-black text-slate-950 md:text-4xl">Invoices</h1>
-          <p className="mt-2 text-slate-600">Create invoices, share payment pages, and track confirmed payments.</p>
+    <div>
+      <PageHeader
+        title="Invoices"
+        description="Create invoices, share payment pages, and track confirmed payments."
+        action={
+          <a href="#create-invoice" className="flex items-center gap-1.5 rounded-lg bg-[var(--payout-blue)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--payout-blue-dark)]">
+            <Plus size={15} />
+            Create Invoice
+          </a>
+        }
+      />
+
+      {!databaseReady && (
+        <div className="mb-5 rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm">
+          <p className="font-semibold text-amber-800">Database setup required</p>
+          <p className="mt-0.5 text-amber-700">Add DATABASE_URL and redeploy to enable invoice creation.</p>
         </div>
-        <ButtonLink href="#create-invoice">Create invoice</ButtonLink>
-      </div>
+      )}
 
-      {!databaseReady ? (
-        <Card className="mb-6 border-blue-100 bg-blue-50/70">
-          <p className="font-bold text-slate-950">Database setup required</p>
-          <p className="mt-1 text-sm text-slate-600">{setupMessage}</p>
-        </Card>
-      ) : null}
-
-      <section className="grid gap-6 xl:grid-cols-[420px_1fr]">
-        <Card id="create-invoice" className="h-fit">
-          <div className="mb-5">
-            <h2 className="text-lg font-black text-slate-950">New invoice</h2>
-            <p className="mt-1 text-sm text-slate-500">Status starts as UNPAID. Nomba webhook confirmation moves it to PAID.</p>
+      <div className="grid gap-5 xl:grid-cols-[400px_1fr]">
+        {/* Create form */}
+        <Card className="h-fit">
+          <div className="mb-4 flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-50 text-[var(--payout-blue)]">
+              <FileText size={14} />
+            </div>
+            <p className="font-semibold text-[var(--foreground)]">Quick Create</p>
           </div>
           <InvoiceForm databaseReady={databaseReady} />
         </Card>
 
-        <Card>
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-black text-slate-950">Invoice list</h2>
-              <p className="mt-1 text-sm text-slate-500">Share links and watch webhook-confirmed status changes.</p>
+        {/* Invoice list */}
+        <div className="flex flex-col gap-5">
+          <Card>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-[var(--foreground)]">Recent Invoices</p>
+              </div>
+              {invoices.length > 0 && (
+                <ButtonLink href="/invoices" variant="ghost" className="px-2 py-1 text-xs text-[var(--payout-blue)]">
+                  View all
+                </ButtonLink>
+              )}
             </div>
-            <Badge value={`${invoices.length} TOTAL`} className="bg-blue-50 text-[var(--payout-blue)] ring-blue-100" />
-          </div>
 
-          {invoices.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-blue-200 bg-blue-50/60 p-8 text-center">
-              <p className="text-lg font-black text-slate-950">{databaseReady ? "No invoices yet" : "Invoice data unavailable"}</p>
-              <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
-                {databaseReady
-                  ? "Create your first invoice to generate a public payment page and Nomba checkout flow."
-                  : "Database connection is not available yet. Add DATABASE_URL and redeploy."}
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {invoices.map((invoice) => {
-                const paymentUrl = invoice.paymentUrl ?? `${getAppUrl()}/pay/invoice/${invoice.id}`;
-                return (
-                  <div key={invoice.id} className="rounded-2xl border border-[var(--border)] bg-white p-4">
-                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-black text-slate-950">{invoice.customerName}</p>
-                          <Badge value={invoice.status} />
-                        </div>
-                        <p className="mt-1 text-sm text-slate-500">{invoice.customerEmail}</p>
-                        <p className="mt-3 max-w-2xl text-sm text-slate-600">{invoice.description}</p>
-                        <p className="mt-3 text-xs font-semibold text-slate-400">Due {invoice.dueDate ? invoice.dueDate.toLocaleDateString("en-NG") : "No due date"}</p>
-                      </div>
-                      <div className="md:text-right">
-                        <p className="text-2xl font-black text-slate-950">{formatNaira(invoice.amount)}</p>
-                        <div className="mt-3 flex flex-wrap gap-2 md:justify-end">
-                          <ButtonLink href={`/pay/invoice/${invoice.id}`} variant="secondary" className="px-3 py-2 text-xs">View</ButtonLink>
-                          <CopyInvoiceLink url={paymentUrl} />
-                        </div>
-                      </div>
-                    </div>
-                    <p className="mt-4 break-all rounded-xl bg-slate-50 p-3 text-xs font-semibold text-slate-500">{paymentUrl}</p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-      </section>
-    </main>
+            {invoices.length === 0 ? (
+              <EmptyState
+                icon={FileText}
+                title={databaseReady ? "No invoices yet" : "Invoice data unavailable"}
+                description={
+                  databaseReady
+                    ? "Create your first invoice to generate a public payment page."
+                    : "Connect a database to enable invoice management."
+                }
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      {["Invoice ID", "Customer", "Amount", "Due Date"].map((h) => (
+                        <th key={h} className="pb-3 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoices.map((invoice, idx) => {
+                      const paymentUrl = invoice.paymentUrl ?? `${getAppUrl()}/pay/invoice/${invoice.id}`;
+                      const invNum = `#INV-${String(idx + 1).padStart(3, "0")}`;
+                      return (
+                        <tr key={invoice.id} className="group border-b border-[var(--border)] last:border-0">
+                          <td className="py-3">
+                            <div className="flex items-center gap-2">
+                              <ButtonLink
+                                href={`/pay/invoice/${invoice.id}`}
+                                variant="ghost"
+                                className="px-0 py-0 text-xs font-bold text-[var(--payout-blue)] hover:underline"
+                              >
+                                {invNum}
+                              </ButtonLink>
+                              <Badge value={invoice.status} />
+                            </div>
+                          </td>
+                          <td className="py-3">
+                            <div className="flex items-center gap-2">
+                              <CustomerAvatar name={invoice.customerName} size="sm" />
+                              <div>
+                                <p className="font-medium text-[var(--foreground)]">{invoice.customerName}</p>
+                                <p className="text-xs text-[var(--muted)]">{invoice.customerEmail}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 font-semibold text-[var(--foreground)]">
+                            {formatNaira(invoice.amount)}
+                          </td>
+                          <td className="py-3 text-xs text-[var(--muted)]">
+                            {invoice.dueDate
+                              ? invoice.dueDate.toLocaleDateString("en-NG", { day: "2-digit", month: "2-digit", year: "numeric" })
+                              : "—"}
+                          </td>
+                          <td className="py-3">
+                            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                              <CopyInvoiceLink url={paymentUrl} />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {/* Quick action cards */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            {quickActions.map(({ icon: Icon, label, description, color, textColor, descColor }) => (
+              <div key={label} className={`rounded-xl p-4 ${color} border border-[var(--border)]`}>
+                <div className={`mb-2 flex h-7 w-7 items-center justify-center rounded-md ${label === "Send Reminder" ? "bg-white/20" : "bg-blue-50"}`}>
+                  <Icon size={14} className={label === "Send Reminder" ? "text-white" : "text-[var(--payout-blue)]"} />
+                </div>
+                <p className={`text-sm font-semibold ${textColor}`}>{label}</p>
+                <p className={`mt-1 text-xs leading-relaxed ${descColor}`}>{description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
