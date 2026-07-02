@@ -24,6 +24,7 @@ type CheckoutOrderInput = {
 
 type CheckoutOrderResponse = {
   checkoutUrl?: string;
+  checkoutUrlField?: string;
   orderReference?: string;
   raw: unknown;
 };
@@ -51,6 +52,12 @@ function env(name: string, fallback?: string) {
   return value;
 }
 
+const requiredNombaEnvVars = ["NOMBA_ACCOUNT_ID", "NOMBA_CLIENT_ID", "NOMBA_PRIVATE_KEY"] as const;
+
+export function getMissingNombaCheckoutEnvVars() {
+  return requiredNombaEnvVars.filter((name) => !process.env[name]);
+}
+
 function getNombaBaseUrl() {
   return env("NOMBA_BASE_URL", "https://api.nomba.com").replace(/\/$/, "");
 }
@@ -65,6 +72,43 @@ function getDefaultSubAccountId() {
 
 function getAppUrl() {
   return env("NEXT_PUBLIC_APP_URL", "http://localhost:3000").replace(/\/$/, "");
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function firstStringField(source: Record<string, unknown>, fields: string[], prefix = "") {
+  for (const field of fields) {
+    const value = source[field];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return { value: value.trim(), field: `${prefix}${field}` };
+    }
+  }
+
+  return null;
+}
+
+function extractCheckoutUrl(raw: Record<string, unknown>) {
+  const urlFields = [
+    "checkoutLink",
+    "checkout_url",
+    "checkoutUrl",
+    "link",
+    "paymentLink",
+    "payment_link",
+    "authorizationUrl",
+    "authorization_url",
+    "url",
+  ];
+
+  const data = asRecord(raw.data);
+  const nestedData = firstStringField(data, urlFields, "data.");
+  if (nestedData) {
+    return nestedData;
+  }
+
+  return firstStringField(raw, urlFields);
 }
 
 async function nombaFetch<T>(path: string, init: RequestInit = {}) {
@@ -99,8 +143,9 @@ export async function getNombaAccessToken() {
       accountId: getParentAccountId(),
     },
     body: JSON.stringify({
-      client_id: clientId,
-      private_key: privateKey,
+      grantType: "client_credentials",
+      clientId,
+      clientSecret: privateKey,
     }),
   }).then(async (response) => {
     const json = (await response.json().catch(() => ({}))) as NombaTokenResponse;
@@ -136,14 +181,23 @@ export async function createNombaCheckoutOrder(input: CheckoutOrderInput): Promi
 
   const raw = await nombaFetch<Record<string, unknown>>("/v1/checkout/order", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ order: payload }),
+  });
+  const checkout = extractCheckoutUrl(raw);
+  const data = asRecord(raw.data);
+
+  console.info("Nomba checkout order response", {
+    reference: input.reference,
+    checkoutUrlField: checkout?.field ?? null,
+    hasCheckoutUrl: Boolean(checkout?.value),
+    responseKeys: Object.keys(raw),
+    dataKeys: Object.keys(data),
   });
 
-  const data = (raw.data ?? raw) as Record<string, unknown>;
-
   return {
-    checkoutUrl: String(data.checkoutUrl ?? data.checkout_url ?? data.paymentLink ?? data.payment_link ?? data.url ?? ""),
-    orderReference: String(data.orderReference ?? data.order_reference ?? data.reference ?? input.reference),
+    checkoutUrl: checkout?.value,
+    checkoutUrlField: checkout?.field,
+    orderReference: String(data.orderReference ?? data.order_reference ?? data.reference ?? raw.orderReference ?? raw.order_reference ?? raw.reference ?? input.reference),
     raw,
   };
 }
@@ -160,7 +214,7 @@ export async function createNombaVirtualAccount(input: VirtualAccountInput): Pro
     }),
   });
 
-  const data = (raw.data ?? raw) as Record<string, unknown>;
+  const data = asRecord(raw.data);
 
   return {
     accountNumber: String(data.accountNumber ?? data.account_number ?? ""),
@@ -192,3 +246,7 @@ export function verifyNombaWebhook(rawBody: string, signature: string | null) {
 
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(normalizedSignature));
 }
+
+
+
+

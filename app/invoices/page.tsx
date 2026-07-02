@@ -9,7 +9,7 @@ import { CopyInvoiceLink } from "@/components/invoices/copy-invoice-link";
 import { createInvoiceAction } from "@/app/invoices/actions";
 import { formatNaira } from "@/lib/format";
 import { getAppUrl } from "@/lib/app-url";
-import { getDb } from "@/lib/db";
+import { getDb, hasDatabaseUrl } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,21 @@ type InvoiceRow = {
   paymentUrl: string | null;
 };
 
-async function getInvoices(): Promise<{ invoices: InvoiceRow[]; databaseReady: boolean }> {
+type InvoiceState = {
+  invoices: InvoiceRow[];
+  databaseReady: boolean;
+  setupMessage?: string;
+};
+
+async function getInvoices(): Promise<InvoiceState> {
+  if (!hasDatabaseUrl()) {
+    return {
+      databaseReady: false,
+      invoices: [],
+      setupMessage: "Database connection is not available yet. Add DATABASE_URL and redeploy.",
+    };
+  }
+
   try {
     const invoices = await getDb().invoice.findMany({
       orderBy: { createdAt: "desc" },
@@ -39,12 +53,56 @@ async function getInvoices(): Promise<{ invoices: InvoiceRow[]; databaseReady: b
       })),
     };
   } catch {
-    return { databaseReady: false, invoices: [] };
+    return {
+      databaseReady: false,
+      invoices: [],
+      setupMessage: "Database connection is not available yet. Add DATABASE_URL and redeploy.",
+    };
   }
 }
 
+function InvoiceForm({ databaseReady }: { databaseReady: boolean }) {
+  const content = (
+    <>
+      <div className="grid gap-2">
+        <Label htmlFor="customerName">Customer name</Label>
+        <Input id="customerName" name="customerName" placeholder="Ada Johnson" required disabled={!databaseReady} />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="customerEmail">Customer email</Label>
+        <Input id="customerEmail" name="customerEmail" placeholder="ada@example.com" type="email" required disabled={!databaseReady} />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="amount">Amount</Label>
+        <Input id="amount" name="amount" placeholder="120000" min="1" step="0.01" type="number" required disabled={!databaseReady} />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea id="description" name="description" className="min-h-24" placeholder="Goods supplied for March" required disabled={!databaseReady} />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="dueDate">Due date</Label>
+        <Input id="dueDate" name="dueDate" type="date" disabled={!databaseReady} />
+      </div>
+      <button
+        className="rounded-xl bg-[var(--payout-blue)] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(33,107,255,0.24)] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+        disabled={!databaseReady}
+        type="submit"
+      >
+        {databaseReady ? "Create invoice" : "Database unavailable"}
+      </button>
+    </>
+  );
+
+  if (!databaseReady) {
+    return <div className="grid gap-4 opacity-75">{content}</div>;
+  }
+
+  return <form action={createInvoiceAction} className="grid gap-4">{content}</form>;
+}
+
 export default async function InvoicesPage() {
-  const { invoices, databaseReady } = await getInvoices();
+  const { invoices, databaseReady, setupMessage } = await getInvoices();
 
   return (
     <main className="mx-auto max-w-7xl px-5 py-8">
@@ -59,8 +117,8 @@ export default async function InvoicesPage() {
 
       {!databaseReady ? (
         <Card className="mb-6 border-blue-100 bg-blue-50/70">
-          <p className="font-bold text-slate-950">Database connection needed</p>
-          <p className="mt-1 text-sm text-slate-600">Add DATABASE_URL and run Prisma migrations to create and list live invoices.</p>
+          <p className="font-bold text-slate-950">Database setup required</p>
+          <p className="mt-1 text-sm text-slate-600">{setupMessage}</p>
         </Card>
       ) : null}
 
@@ -70,31 +128,7 @@ export default async function InvoicesPage() {
             <h2 className="text-lg font-black text-slate-950">New invoice</h2>
             <p className="mt-1 text-sm text-slate-500">Status starts as UNPAID. Nomba webhook confirmation moves it to PAID.</p>
           </div>
-          <form action={createInvoiceAction} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="customerName">Customer name</Label>
-              <Input id="customerName" name="customerName" placeholder="Ada Johnson" required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="customerEmail">Customer email</Label>
-              <Input id="customerEmail" name="customerEmail" placeholder="ada@example.com" type="email" required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="amount">Amount</Label>
-              <Input id="amount" name="amount" placeholder="120000" min="1" step="0.01" type="number" required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" name="description" className="min-h-24" placeholder="Goods supplied for March" required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="dueDate">Due date</Label>
-              <Input id="dueDate" name="dueDate" type="date" />
-            </div>
-            <button className="rounded-xl bg-[var(--payout-blue)] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(33,107,255,0.24)]" type="submit">
-              Create invoice
-            </button>
-          </form>
+          <InvoiceForm databaseReady={databaseReady} />
         </Card>
 
         <Card>
@@ -108,8 +142,12 @@ export default async function InvoicesPage() {
 
           {invoices.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-blue-200 bg-blue-50/60 p-8 text-center">
-              <p className="text-lg font-black text-slate-950">No invoices yet</p>
-              <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">Create your first invoice to generate a public payment page and Nomba checkout flow.</p>
+              <p className="text-lg font-black text-slate-950">{databaseReady ? "No invoices yet" : "Invoice data unavailable"}</p>
+              <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
+                {databaseReady
+                  ? "Create your first invoice to generate a public payment page and Nomba checkout flow."
+                  : "Database connection is not available yet. Add DATABASE_URL and redeploy."}
+              </p>
             </div>
           ) : (
             <div className="grid gap-3">

@@ -4,7 +4,7 @@ import { InvoiceStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAppUrl } from "@/lib/app-url";
-import { getDb } from "@/lib/db";
+import { getDb, hasDatabaseUrl } from "@/lib/db";
 import { getDemoBusiness } from "@/lib/demo-business";
 
 function requiredString(formData: FormData, key: string) {
@@ -16,6 +16,10 @@ function requiredString(formData: FormData, key: string) {
 }
 
 export async function createInvoiceAction(formData: FormData) {
+  if (!hasDatabaseUrl()) {
+    redirect("/invoices?database=unavailable");
+  }
+
   const customerName = requiredString(formData, "customerName");
   const customerEmail = requiredString(formData, "customerEmail");
   const amount = Number(requiredString(formData, "amount"));
@@ -26,26 +30,34 @@ export async function createInvoiceAction(formData: FormData) {
     throw new Error("amount must be greater than zero");
   }
 
-  const db = getDb();
-  const business = await getDemoBusiness();
-  const invoice = await db.invoice.create({
-    data: {
-      businessId: business.id,
-      customerName,
-      customerEmail,
-      amount,
-      description,
-      dueDate: typeof dueDateValue === "string" && dueDateValue ? new Date(dueDateValue) : null,
-      status: InvoiceStatus.UNPAID,
-    },
-  });
+  let invoiceId: string;
 
-  const paymentUrl = `${getAppUrl()}/pay/invoice/${invoice.id}`;
-  await db.invoice.update({
-    where: { id: invoice.id },
-    data: { paymentUrl },
-  });
+  try {
+    const db = getDb();
+    const business = await getDemoBusiness();
+    const invoice = await db.invoice.create({
+      data: {
+        businessId: business.id,
+        customerName,
+        customerEmail,
+        amount,
+        description,
+        dueDate: typeof dueDateValue === "string" && dueDateValue ? new Date(dueDateValue) : null,
+        status: InvoiceStatus.UNPAID,
+      },
+    });
+
+    const paymentUrl = `${getAppUrl()}/pay/invoice/${invoice.id}`;
+    await db.invoice.update({
+      where: { id: invoice.id },
+      data: { paymentUrl },
+    });
+
+    invoiceId = invoice.id;
+  } catch {
+    redirect("/invoices?database=unavailable");
+  }
 
   revalidatePath("/invoices");
-  redirect(`/invoices?created=${invoice.id}`);
+  redirect(`/invoices?created=${invoiceId}`);
 }
