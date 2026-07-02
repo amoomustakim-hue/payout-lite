@@ -1,7 +1,20 @@
 import { TransactionStatus } from "@prisma/client";
+import {
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  Link2,
+  Sparkles,
+  ArrowUpRight,
+  AlertCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/stat-card";
+import { CustomerAvatar } from "@/components/ui/customer-avatar";
 import { formatNaira } from "@/lib/format";
 import { getDb } from "@/lib/db";
 
@@ -21,13 +34,22 @@ type DashboardData = {
     status: string;
     amount: string;
     customerName: string | null;
+    createdAt: Date;
   }>;
 };
 
 async function getDashboardData(): Promise<DashboardData> {
   try {
     const db = getDb();
-    const [paidAggregate, pendingAggregate, failedCount, paidCount, invoiceCount, unpaidInvoiceCount, recent] = await Promise.all([
+    const [
+      paidAggregate,
+      pendingAggregate,
+      failedCount,
+      paidCount,
+      invoiceCount,
+      unpaidInvoiceCount,
+      recent,
+    ] = await Promise.all([
       db.transaction.aggregate({ where: { status: TransactionStatus.PAID }, _sum: { amount: true } }),
       db.transaction.aggregate({ where: { status: TransactionStatus.PENDING }, _sum: { amount: true } }),
       db.transaction.count({ where: { status: TransactionStatus.FAILED } }),
@@ -45,12 +67,13 @@ async function getDashboardData(): Promise<DashboardData> {
       paidCount,
       invoiceCount,
       unpaidInvoiceCount,
-      recent: recent.map((transaction) => ({
-        reference: transaction.reference,
-        source: transaction.source,
-        status: transaction.status,
-        amount: transaction.amount.toString(),
-        customerName: transaction.customerName,
+      recent: recent.map((t) => ({
+        reference: t.reference,
+        source: t.source,
+        status: t.status,
+        amount: t.amount.toString(),
+        customerName: t.customerName,
+        createdAt: t.createdAt,
       })),
     };
   } catch {
@@ -67,88 +90,192 @@ async function getDashboardData(): Promise<DashboardData> {
   }
 }
 
+function sourceLabel(source: string) {
+  const map: Record<string, string> = {
+    INVOICE: "Invoice",
+    WEBSITE_BUTTON: "Website Button",
+    SHOP_QR: "Shop QR",
+    UNIQUE_ACCOUNT: "Unique Account",
+  };
+  return map[source] ?? source;
+}
+
+function formatRelative(date: Date) {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "Yesterday";
+  return `${days}d ago`;
+}
+
 export default async function DashboardPage() {
   const data = await getDashboardData();
 
   return (
-    <main className="mx-auto max-w-7xl px-5 py-8">
-      <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--payout-blue)]">Payout Lite</p>
-          <h1 className="mt-2 text-3xl font-black text-slate-950 md:text-4xl">Dashboard</h1>
-          <p className="mt-2 text-slate-600">Track confirmed Nomba payments across every invoice and channel.</p>
+    <div>
+      <PageHeader
+        title="Payment overview"
+        description="Track invoices, checkout payments, QR payments, and account transfers in one place."
+      />
+
+      {!data.databaseReady && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm">
+          <AlertCircle size={16} className="mt-0.5 shrink-0 text-amber-600" />
+          <div>
+            <p className="font-semibold text-amber-800">Database not connected</p>
+            <p className="mt-0.5 text-amber-700">
+              Add DATABASE_URL to see live metrics. The dashboard will update as webhooks confirm payments.
+            </p>
+          </div>
         </div>
-        <span className="rounded-full bg-blue-50 px-4 py-2 text-sm font-bold text-[var(--payout-blue)] ring-1 ring-blue-100">Test mode</span>
+      )}
+
+      {/* Stat cards */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Total received"
+          value={formatNaira(data.totalReceived)}
+          badge="Webhook confirmed"
+          variant="green"
+          icon={TrendingUp}
+        />
+        <StatCard
+          label="Pending payments"
+          value={formatNaira(data.pendingAmount)}
+          badge="Awaiting confirmation"
+          variant="amber"
+          icon={Clock}
+        />
+        <StatCard
+          label="Paid invoices"
+          value={String(data.paidCount)}
+          badge="This month"
+          variant="slate"
+          icon={CheckCircle2}
+        />
+        <StatCard
+          label="Active payment links"
+          value={String(data.invoiceCount)}
+          badge="Ready to share"
+          variant="blue"
+          icon={Link2}
+        />
       </div>
 
-      {!data.databaseReady ? (
-        <Card className="mb-6 border-blue-100 bg-blue-50/70">
-          <p className="font-bold text-slate-950">Connect DATABASE_URL to see live metrics</p>
-          <p className="mt-1 text-sm text-slate-600">The dashboard is wired for Prisma and will update as webhooks mark transactions paid or failed.</p>
-        </Card>
-      ) : null}
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total received" value={formatNaira(data.totalReceived)} helper="Webhook-confirmed revenue" />
-        <StatCard label="Pending payments" value={formatNaira(data.pendingAmount)} helper="Awaiting webhook confirmation" />
-        <StatCard label="Paid payments" value={String(data.paidCount)} helper="Successful transactions" />
-        <StatCard label="Failed payments" value={String(data.failedCount)} helper="Failed or abandoned payments" />
-      </section>
-
-      <section className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      {/* Chart + AI CFO */}
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_340px]">
+        {/* Chart area */}
         <Card>
-          <h2 className="font-black text-slate-950">Revenue chart</h2>
-          <div className="mt-6 flex h-64 items-end gap-3">
-            {[32, 48, 38, 64, 46, 82, 60].map((height, index) => (
-              <div key={index} className="flex flex-1 flex-col items-center gap-2">
-                <div className="w-full rounded-t-xl bg-gradient-to-t from-[var(--payout-blue)] to-[var(--payout-cyan)]" style={{ height: `${height}%` }} />
-                <span className="text-xs font-semibold text-slate-400">D{index + 1}</span>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-[var(--foreground)]">Payment activity</p>
+              <p className="text-xs text-[var(--muted)]">Revenue distribution by collection channel</p>
+            </div>
+            <button className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:bg-slate-50">
+              Last 7 Days
+              <span className="text-slate-300">▼</span>
+            </button>
+          </div>
+          <div className="flex h-48 items-end gap-4 px-2 pb-2">
+            {[
+              { label: "Invoices", h: 72 },
+              { label: "Buttons", h: 40 },
+              { label: "Shop QR", h: 55 },
+              { label: "Account", h: 80 },
+            ].map(({ label, h }) => (
+              <div key={label} className="flex flex-1 flex-col items-center gap-2">
+                <div
+                  className="w-full rounded-t-lg bg-[var(--payout-blue)]/20"
+                  style={{ height: `${h}%` }}
+                />
+                <span className="text-xs text-[var(--muted)]">{label}</span>
               </div>
             ))}
           </div>
         </Card>
-        <Card>
-          <h2 className="font-black text-slate-950">Invoice summary</h2>
-          <div className="mt-5 grid gap-3">
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">Total invoices</p>
-              <p className="mt-1 text-2xl font-black text-slate-950">{data.invoiceCount}</p>
-            </div>
-            <div className="rounded-2xl bg-blue-50 p-4">
-              <p className="text-sm text-slate-500">Unpaid or pending</p>
-              <p className="mt-1 text-2xl font-black text-[var(--payout-blue)]">{data.unpaidInvoiceCount}</p>
-            </div>
-          </div>
-        </Card>
-      </section>
 
-      <Card className="mt-6">
-        <h2 className="font-black text-slate-950">Recent transactions</h2>
-        {data.recent.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/60 p-8 text-center">
-            <p className="font-black text-slate-950">No transactions yet</p>
-            <p className="mt-2 text-sm text-slate-600">Create an invoice and start a checkout to see pending payments here.</p>
+        {/* AI CFO insight */}
+        <div className="rounded-xl bg-[var(--payout-blue)] p-5 text-white">
+          <div className="mb-3 flex items-center gap-1.5">
+            <Sparkles size={14} className="text-blue-200" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-blue-200">
+              AI CFO Insight
+            </span>
           </div>
+          <p className="text-lg font-bold leading-snug">
+            Shop QR payments are growing and may become your fastest offline collection channel.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-blue-100">
+            Most of your confirmed revenue came from invoices this week. Consider promoting QR codes to your walk-in customers.
+          </p>
+          <ButtonLink
+            href="/ai-cfo"
+            variant="secondary"
+            className="mt-5 w-full justify-center border-white/30 bg-white/10 text-white hover:bg-white/20"
+          >
+            Open AI CFO
+            <ArrowUpRight size={14} />
+          </ButtonLink>
+        </div>
+      </div>
+
+      {/* Recent transactions */}
+      <Card className="mt-5">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="font-semibold text-[var(--foreground)]">Recent transactions</p>
+          <ButtonLink href="/transactions" variant="ghost" className="px-2 py-1 text-xs text-[var(--payout-blue)]">
+            View all report
+          </ButtonLink>
+        </div>
+
+        {data.recent.length === 0 ? (
+          <EmptyState
+            icon={CheckCircle2}
+            title="No transactions yet"
+            description="Create an invoice and start a checkout to see payments here."
+            action={<ButtonLink href="/invoices">Create invoice</ButtonLink>}
+          />
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="text-slate-500">
-                <tr>
-                  <th className="py-3">Reference</th>
-                  <th>Customer</th>
-                  <th>Source</th>
-                  <th>Status</th>
-                  <th className="text-right">Amount</th>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  {["Customer / Name", "Source", "Amount", "Status", "Date"].map((h) => (
+                    <th key={h} className="pb-3 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {data.recent.map((row) => (
-                  <tr key={row.reference} className="border-t border-[var(--border)]">
-                    <td className="max-w-[220px] truncate py-3 font-bold text-slate-700">{row.reference}</td>
-                    <td className="py-3 text-slate-600">{row.customerName ?? "Customer"}</td>
-                    <td className="py-3 text-slate-600">{row.source}</td>
-                    <td className="py-3"><Badge value={row.status} /></td>
-                    <td className="py-3 text-right font-black text-slate-950">{formatNaira(row.amount)}</td>
+                  <tr key={row.reference} className="border-b border-[var(--border)] last:border-0">
+                    <td className="py-3">
+                      <div className="flex items-center gap-2.5">
+                        <CustomerAvatar name={row.customerName ?? "?"} />
+                        <div>
+                          <p className="font-medium text-[var(--foreground)]">
+                            {row.customerName ?? "Customer"}
+                          </p>
+                          <p className="text-xs text-[var(--muted)]">
+                            {row.reference.slice(0, 16)}…
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 text-[var(--muted)]">{sourceLabel(row.source)}</td>
+                    <td className="py-3 font-semibold text-[var(--foreground)]">
+                      {formatNaira(row.amount)}
+                    </td>
+                    <td className="py-3">
+                      <Badge value={row.status} />
+                    </td>
+                    <td className="py-3 text-xs text-[var(--muted)]">
+                      {formatRelative(row.createdAt)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -156,6 +283,6 @@ export default async function DashboardPage() {
           </div>
         )}
       </Card>
-    </main>
+    </div>
   );
 }

@@ -2,14 +2,14 @@ import Link from "next/link";
 
 export function PayoutLiteLogo({ href = "/" }: { href?: string }) {
   return (
-    <Link href={href} className="flex items-center gap-3 font-bold text-slate-950">
-      <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--payout-blue)] text-sm font-extrabold text-white shadow-[0_12px_30px_rgba(33,107,255,0.22)]">
-        PL
-      </span>
-      <span className="leading-tight">
-        <span className="block text-base">Payout Lite</span>
-        <span className="block text-xs font-semibold text-[var(--payout-blue)]">Nomba powered</span>
-      </span>
+    <Link href={href} className="flex items-center gap-2.5">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--payout-blue)]">
+        <span className="text-xs font-black text-white">PL</span>
+      </div>
+      <div className="leading-tight">
+        <p className="text-sm font-black text-[var(--foreground)]">Payout Lite</p>
+        <p className="text-[11px] text-[var(--muted)]">Nomba powered</p>
+      </div>
     </Link>
   );
 }
