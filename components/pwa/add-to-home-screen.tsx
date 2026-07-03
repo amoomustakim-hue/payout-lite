@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Share, MoreVertical, Plus } from "lucide-react";
+import { X, Share, Plus } from "lucide-react";
 
 type InstallPromptEvent = Event & {
   prompt: () => Promise<void>;
