@@ -321,8 +321,8 @@ function FeatureSection({
   return (
     <section id={id} className={`${bg} py-20 lg:py-28`}>
       <div className="mx-auto max-w-6xl px-5">
-        <div className={`flex flex-col items-center gap-14 lg:flex-row lg:gap-24 ${flip ? "lg:flex-row-reverse" : ""}`}>
-          <FadeIn from={flip ? "right" : "left"} className="flex-1">
+        <div className={`flex flex-col items-stretch gap-14 lg:flex-row lg:items-center lg:gap-24 ${flip ? "lg:flex-row-reverse" : ""}`}>
+          <FadeIn from={flip ? "right" : "left"} className="w-full min-w-0 flex-1 lg:w-auto">
             <p className="mb-4 text-xs font-bold uppercase tracking-widest text-[#2563EB]">{eyebrow}</p>
             <h2 className="mb-4 text-3xl font-black leading-tight text-[#0F172A] lg:text-4xl">{title}</h2>
             <p className="mb-8 text-base leading-relaxed text-slate-500">{body}</p>
@@ -335,7 +335,7 @@ function FeatureSection({
             </Link>
           </FadeIn>
 
-          <FadeIn from={flip ? "left" : "right"} className="w-full max-w-[280px] flex-shrink-0 lg:w-auto">
+          <FadeIn from={flip ? "left" : "right"} className="mx-auto w-full max-w-[280px] flex-shrink-0 lg:mx-0 lg:w-auto">
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
@@ -540,9 +540,9 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
           <div className="absolute bottom-0 left-0 h-[40vh] w-[40vw] bg-gradient-to-tr from-slate-50/80 via-transparent to-transparent" />
         </div>
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-80px)] max-w-6xl flex-col items-center px-5 pt-12 lg:flex-row lg:items-center lg:gap-8 lg:pt-0">
+        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-80px)] max-w-6xl flex-col items-stretch px-5 pt-12 lg:flex-row lg:items-center lg:gap-8 lg:pt-0">
           {/* Left: text */}
-          <div className="flex-1 pb-10 text-center lg:pb-0 lg:text-left">
+          <div className="w-full flex-1 min-w-0 pb-10 text-center lg:pb-0 lg:text-left">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -558,7 +558,7 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-5 text-[2.6rem] font-black leading-[1.05] tracking-tight text-[#0F172A] sm:text-5xl lg:text-[3.75rem]"
+              className="mt-5 text-[2rem] font-black leading-[1.05] tracking-tight text-[#0F172A] sm:text-[2.6rem] lg:text-[3.75rem]"
             >
               Collect payments from
               {" "}<br className="hidden sm:block" />
@@ -613,11 +613,11 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
             initial={{ opacity: 0, y: 48 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="relative flex-shrink-0 pb-10 lg:pb-0"
+            className="relative flex-shrink-0 self-center pb-10 lg:self-auto lg:pb-0"
           >
             {/* Top-left floating card */}
             <motion.div
-              className="absolute -left-4 top-10 z-10 min-w-[160px] rounded-2xl border border-slate-100 bg-white px-3.5 py-2.5 shadow-lg lg:-left-20"
+              className="absolute -left-4 top-10 z-10 hidden min-w-[160px] rounded-2xl border border-slate-100 bg-white px-3.5 py-2.5 shadow-lg sm:block lg:-left-20"
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.85 }}
@@ -643,7 +643,7 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
 
             {/* Bottom-right floating card: total */}
             <motion.div
-              className="absolute -right-4 bottom-28 z-10 min-w-[152px] rounded-2xl border border-slate-100 bg-white px-3.5 py-2.5 shadow-lg lg:-right-20"
+              className="absolute -right-4 bottom-28 z-10 hidden min-w-[152px] rounded-2xl border border-slate-100 bg-white px-3.5 py-2.5 shadow-lg sm:block lg:-right-20"
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 1.0 }}
@@ -658,7 +658,7 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
 
             {/* AI CFO chip */}
             <motion.div
-              className="absolute -right-4 top-12 z-10 max-w-[172px] rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2.5 shadow-md lg:-right-20"
+              className="absolute -right-4 top-12 z-10 hidden max-w-[172px] rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2.5 shadow-md sm:block lg:-right-20"
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 1.15 }}
