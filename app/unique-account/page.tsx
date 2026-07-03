@@ -1,8 +1,32 @@
-import { Landmark, Copy, RefreshCw } from "lucide-react";
+import { Landmark } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { getDb, hasDatabaseUrl } from "@/lib/db";
+import { getDemoBusiness } from "@/lib/demo-business";
+import { CreateVirtualAccountButton } from "@/components/unique-account/create-button";
+import { CopyAccountButton } from "@/components/unique-account/copy-account-button";
 
-export default function UniqueAccountPage() {
+export const dynamic = "force-dynamic";
+
+async function getVirtualAccount() {
+  if (!hasDatabaseUrl()) return null;
+  try {
+    const business = await getDemoBusiness();
+    return getDb().virtualAccount.findFirst({
+      where: { businessId: business.id, active: true },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch {
+    return null;
+  }
+}
+
+export default async function UniqueAccountPage() {
+  const account = await getVirtualAccount();
+  const copyText = account
+    ? `Bank: ${account.bankName}\nAccount Number: ${account.accountNumber}\nAccount Name: ${account.accountName}`
+    : "";
+
   return (
     <div>
       <PageHeader
@@ -20,29 +44,36 @@ export default function UniqueAccountPage() {
             <p className="font-semibold text-[var(--foreground)]">Virtual Account</p>
           </div>
 
-          <div className="grid gap-4 rounded-xl border border-[var(--border)] bg-slate-50 p-5 sm:grid-cols-3">
-            {[
-              { label: "Bank name", value: "Nomba Bank" },
-              { label: "Account number", value: "0123456789" },
-              { label: "Account name", value: "Ada Stores — Payout Lite" },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-xs font-medium text-[var(--muted)]">{label}</p>
-                <p className="mt-1 font-bold text-[var(--foreground)]">{value}</p>
+          {account ? (
+            <>
+              <div className="grid gap-4 rounded-xl border border-[var(--border)] bg-slate-50 p-5 sm:grid-cols-3">
+                {[
+                  { label: "Bank name", value: account.bankName },
+                  { label: "Account number", value: account.accountNumber },
+                  { label: "Account name", value: account.accountName },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <p className="text-xs font-medium text-[var(--muted)]">{label}</p>
+                    <p className="mt-1 font-bold text-[var(--foreground)]">{value}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <button className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:bg-slate-50">
-              <Copy size={12} />
-              Copy account details
-            </button>
-            <button className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:bg-slate-50">
-              <RefreshCw size={12} />
-              Refresh from Nomba
-            </button>
-          </div>
+              <div className="mt-4">
+                <CopyAccountButton text={copyText} />
+              </div>
+            </>
+          ) : (
+            <div className="rounded-xl border border-dashed border-[var(--border)] bg-slate-50 p-8 text-center">
+              <Landmark size={28} className="mx-auto mb-3 text-slate-300" strokeWidth={1.5} />
+              <p className="font-semibold text-[var(--foreground)]">No virtual account yet</p>
+              <p className="mt-1.5 text-sm text-[var(--muted)]">
+                Create a Nomba virtual account to receive bank transfers directly.
+              </p>
+              <div className="mt-5 flex justify-center">
+                <CreateVirtualAccountButton />
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Instructions */}
@@ -66,9 +97,11 @@ export default function UniqueAccountPage() {
         </div>
       </div>
 
-      <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-700">
-        Showing demo data — connect DATABASE_URL and Nomba credentials to create a real virtual account.
-      </div>
+      {!hasDatabaseUrl() && (
+        <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+          Connect DATABASE_URL and Nomba credentials to create a real virtual account.
+        </div>
+      )}
     </div>
   );
 }

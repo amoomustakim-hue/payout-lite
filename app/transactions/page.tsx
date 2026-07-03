@@ -5,35 +5,75 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { CustomerAvatar } from "@/components/ui/customer-avatar";
 import { formatNaira } from "@/lib/format";
+import { getDb, hasDatabaseUrl } from "@/lib/db";
 
-const DEMO_TRANSACTIONS = [
-  { ref: "INV-1007", source: "Invoice", status: "PAID", amount: 120000, customer: "Ada Johnson", date: "Today" },
-  { ref: "QR-8082", source: "Shop QR", status: "PAID", amount: 8500, customer: "Tobi Stores", date: "Yesterday" },
-  { ref: "BTN-0441", source: "Website Button", status: "PENDING", amount: 32000, customer: "Chika Foods", date: "Yesterday" },
-  { ref: "VA-6001", source: "Unique Account", status: "PAID", amount: 250000, customer: "Musa Retail", date: "2 days ago" },
-];
+export const dynamic = "force-dynamic";
 
-export default function TransactionsPage() {
+const SOURCE_LABELS: Record<string, string> = {
+  INVOICE: "Invoice",
+  WEBSITE_BUTTON: "Website Button",
+  SHOP_QR: "Shop QR",
+  UNIQUE_ACCOUNT: "Unique Account",
+};
+
+function formatRelative(date: Date) {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "Yesterday";
+  return date.toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+async function getTransactions() {
+  if (!hasDatabaseUrl()) return { transactions: [], databaseReady: false };
+  try {
+    const transactions = await getDb().transaction.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    return { transactions, databaseReady: true };
+  } catch {
+    return { transactions: [], databaseReady: false };
+  }
+}
+
+export default async function TransactionsPage() {
+  const { transactions, databaseReady } = await getTransactions();
+
   return (
     <div>
       <PageHeader
         title="Transactions"
-        description="Confirmed, pending, and failed payments from all Payout Lite channels."
+        description="Webhook-confirmed payments from all Payout Lite channels."
       />
 
+      {!databaseReady && (
+        <div className="mb-5 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <strong>Database not connected.</strong> Add DATABASE_URL to see real transactions.
+        </div>
+      )}
+
       <Card>
-        {DEMO_TRANSACTIONS.length === 0 ? (
+        {transactions.length === 0 ? (
           <EmptyState
             icon={ArrowLeftRight}
-            title="No transactions yet"
-            description="Payments from invoices, QR codes, buttons, and virtual accounts will appear here."
+            title={databaseReady ? "No transactions yet" : "Database unavailable"}
+            description={
+              databaseReady
+                ? "Payments from invoices, QR codes, buttons, and virtual accounts will appear here once confirmed by Nomba webhooks."
+                : "Connect a database to see webhook-confirmed transactions."
+            }
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  {["Customer / Name", "Source", "Amount", "Status", "Date"].map((h) => (
+                  {["Customer", "Source", "Amount", "Status", "Date"].map((h) => (
                     <th key={h} className="pb-3 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                       {h}
                     </th>
@@ -41,21 +81,31 @@ export default function TransactionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {DEMO_TRANSACTIONS.map((row) => (
-                  <tr key={row.ref} className="border-b border-[var(--border)] last:border-0">
+                {transactions.map((row) => (
+                  <tr key={row.id} className="border-b border-[var(--border)] last:border-0">
                     <td className="py-3">
                       <div className="flex items-center gap-2.5">
-                        <CustomerAvatar name={row.customer} />
+                        <CustomerAvatar name={row.customerName ?? "?"} />
                         <div>
-                          <p className="font-medium text-[var(--foreground)]">{row.customer}</p>
-                          <p className="text-xs text-[var(--muted)]">{row.ref}</p>
+                          <p className="font-medium text-[var(--foreground)]">
+                            {row.customerName ?? "Customer"}
+                          </p>
+                          <p className="text-xs text-[var(--muted)]">{row.reference.slice(0, 20)}…</p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 text-[var(--muted)]">{row.source}</td>
-                    <td className="py-3 font-semibold text-[var(--foreground)]">{formatNaira(row.amount)}</td>
-                    <td className="py-3"><Badge value={row.status} /></td>
-                    <td className="py-3 text-xs text-[var(--muted)]">{row.date}</td>
+                    <td className="py-3 text-[var(--muted)]">
+                      {SOURCE_LABELS[row.source] ?? row.source}
+                    </td>
+                    <td className="py-3 font-semibold text-[var(--foreground)]">
+                      {formatNaira(row.amount.toString())}
+                    </td>
+                    <td className="py-3">
+                      <Badge value={row.status} />
+                    </td>
+                    <td className="py-3 text-xs text-[var(--muted)]">
+                      {formatRelative(row.createdAt)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -63,10 +113,6 @@ export default function TransactionsPage() {
           </div>
         )}
       </Card>
-
-      <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-700">
-        Showing demo data — connect DATABASE_URL to see real webhook-confirmed transactions.
-      </div>
     </div>
   );
 }
