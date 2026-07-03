@@ -13,7 +13,6 @@ import {
   Sparkles,
   Settings2,
   Search,
-  ChevronDown,
   Plus,
   Shield,
   Menu,
@@ -90,7 +89,13 @@ function Sidebar({ pathname }: { pathname: string }) {
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  businessBadge,
+}: {
+  children: React.ReactNode;
+  businessBadge?: React.ReactNode;
+}) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -145,10 +150,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="ml-auto flex items-center gap-2">
             {/* Business selector */}
-            <button className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-slate-50">
-              Ada Stores
-              <ChevronDown size={13} className="text-slate-400" />
-            </button>
+            {businessBadge}
 
             {/* Create Invoice CTA */}
             <Link

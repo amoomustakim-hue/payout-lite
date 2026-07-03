@@ -2,7 +2,9 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { AppShell } from "@/components/ui/app-shell";
+import { BusinessBadge } from "@/components/ui/business-badge";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { AddToHomeScreen } from "@/components/pwa/add-to-home-screen";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -40,7 +42,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <html lang="en" className={plusJakarta.variable}>
         <body>
           <ServiceWorkerRegister />
-          <AppShell>{children}</AppShell>
+          <AddToHomeScreen />
+          <AppShell businessBadge={<BusinessBadge />}>{children}</AppShell>
         </body>
       </html>
     </ClerkProvider>
