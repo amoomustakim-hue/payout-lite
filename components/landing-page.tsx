@@ -313,19 +313,19 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="fixed top-0 z-50 w-full border-b border-[#030712]/[0.06] bg-[#030712]/95 backdrop-blur-xl"
+        className="fixed top-0 z-50 w-full border-b border-slate-100 bg-white"
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2563EB]">
               <span className="text-xs font-black text-white">PL</span>
             </div>
-            <span className="text-sm font-black text-white">Payout Lite</span>
+            <span className="text-sm font-black text-[#0F172A]">Payout Lite</span>
           </Link>
           <nav className="hidden items-center gap-7 md:flex">
             {["Use Cases", "Features", "Security", "FAQ"].map((item) => (
               <a key={item} href={`#${item.toLowerCase().replace(" ", "-")}`}
-                className="text-sm text-slate-400 transition hover:text-white">
+                className="text-sm text-slate-500 transition hover:text-[#0F172A]">
                 {item}
               </a>
             ))}
@@ -339,7 +339,7 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
             ) : (
               <>
                 <Link href="/sign-in"
-                  className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10">
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-[#0F172A] transition hover:bg-slate-50">
                   Sign in
                 </Link>
                 <Link href="/sign-up"
@@ -355,13 +355,11 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
       {/* ── Hero ────────────────────────────────────────────────────────── */}
       <section
         ref={heroRef}
-        className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#030712] pb-0 pt-24"
+        className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-white pb-0 pt-24"
       >
-        {/* Glow */}
+        {/* Subtle blue tint top */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute left-1/2 top-[-10%] h-[700px] w-[700px] -translate-x-1/2 rounded-full bg-[#2563EB]/15 blur-[120px]" />
-          <div className="absolute left-[20%] top-[30%] h-[300px] w-[300px] rounded-full bg-blue-600/8 blur-[80px]" />
-          <div className="absolute right-[15%] top-[20%] h-[200px] w-[200px] rounded-full bg-cyan-500/6 blur-[60px]" />
+          <div className="absolute left-1/2 top-[-20%] h-[600px] w-[800px] -translate-x-1/2 rounded-full bg-blue-50/80 blur-[100px]" />
         </div>
 
         <motion.div
@@ -376,20 +374,20 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <span className="inline-flex items-center gap-2 rounded-full border border-blue-500/25 bg-blue-500/10 px-3.5 py-1.5 text-xs font-semibold text-blue-400">
+                <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-[#2563EB]">
                   <Zap size={11} />
                   Nomba Hackathon Build Track
                 </span>
               </motion.div>
 
               <motion.h1
-                className="mt-6 text-4xl font-black leading-[1.06] tracking-tight text-white sm:text-5xl lg:text-6xl"
+                className="mt-6 text-4xl font-black leading-[1.06] tracking-tight text-[#0F172A] sm:text-5xl lg:text-6xl"
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
               >
                 Your Personal{" "}
-                <span className="bg-gradient-to-br from-[#60a5fa] to-[#2563EB] bg-clip-text text-transparent">
+                <span className="text-[#2563EB]">
                   Payment Hub
                 </span>
                 ,{" "}
@@ -398,7 +396,7 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
               </motion.h1>
 
               <motion.p
-                className="mx-auto mt-5 max-w-md text-base leading-relaxed text-slate-400 lg:mx-0 lg:text-lg"
+                className="mx-auto mt-5 max-w-md text-base leading-relaxed text-slate-500 lg:mx-0 lg:text-lg"
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.2 }}
@@ -431,7 +429,7 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
                 <div className="flex -space-x-2">
                   {["AN", "OB", "CK", "MM"].map((init, i) => (
                     <div key={i}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#030712] bg-gradient-to-br from-blue-400 to-blue-600 text-[9px] font-bold text-white"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white"
                       style={{ background: ["#3b82f6","#8b5cf6","#10b981","#f59e0b"][i] }}>
                       {init}
                     </div>
@@ -441,7 +439,7 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
                   <div className="flex items-center gap-0.5">
                     {[...Array(5)].map((_, i) => <Star key={i} size={11} className="fill-amber-400 text-amber-400" />)}
                   </div>
-                  <p className="text-xs text-slate-400">Trusted by 100+ Nigerian businesses</p>
+                  <p className="text-xs text-slate-500">Trusted by 100+ Nigerian businesses</p>
                 </div>
               </motion.div>
             </div>
@@ -455,13 +453,13 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
             >
               {/* Sent money notification */}
               <motion.div
-                className="absolute -left-4 top-20 z-10 rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur-md lg:-left-16"
+                className="absolute -left-4 top-20 z-10 rounded-2xl border border-slate-100 bg-white p-3 shadow-lg lg:-left-16"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 0.8 }}
               >
-                <p className="text-[10px] font-semibold text-white">✅ Paid ₦45,000</p>
-                <p className="text-[9px] text-slate-300">Ada Stores — Invoice #042</p>
+                <p className="text-[10px] font-semibold text-[#0F172A]">✅ Paid ₦45,000</p>
+                <p className="text-[9px] text-slate-400">Ada Stores — Invoice #042</p>
               </motion.div>
 
               <motion.div
@@ -475,24 +473,18 @@ export function LandingPage({ isSignedIn }: { isSignedIn: boolean }) {
 
               {/* Bottom notification */}
               <motion.div
-                className="absolute -right-4 bottom-20 z-10 rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur-md lg:-right-16"
+                className="absolute -right-4 bottom-20 z-10 rounded-2xl border border-slate-100 bg-white p-3 shadow-lg lg:-right-16"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 1 }}
               >
-                <p className="text-[10px] font-semibold text-white">🔔 Webhook confirmed</p>
-                <p className="text-[9px] text-slate-300">HMAC verified by Nomba</p>
+                <p className="text-[10px] font-semibold text-[#0F172A]">🔔 Webhook confirmed</p>
+                <p className="text-[9px] text-slate-400">HMAC verified by Nomba</p>
               </motion.div>
             </motion.div>
           </div>
         </motion.div>
 
-        {/* Bottom wave into white */}
-        <div className="relative z-10 mt-0 w-full">
-          <svg viewBox="0 0 1440 80" className="block w-full" preserveAspectRatio="none">
-            <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="white" />
-          </svg>
-        </div>
       </section>
 
       {/* ── Feature sections ─────────────────────────────────────────────── */}
