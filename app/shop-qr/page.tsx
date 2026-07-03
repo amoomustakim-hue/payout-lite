@@ -1,7 +1,8 @@
-import { QrCode, ExternalLink, Download } from "lucide-react";
+import { QrCode, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAppUrl } from "@/lib/app-url";
+import { QrDisplay } from "@/components/shop-qr/qr-display";
 
 export default function ShopQrPage() {
   const appUrl = getAppUrl();
@@ -17,15 +18,7 @@ export default function ShopQrPage() {
       <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
         {/* QR display */}
         <Card className="flex flex-col items-center gap-4 py-8">
-          <div className="qr-grid h-48 w-48 rounded-xl border border-[var(--border)]" />
-          <div className="text-center">
-            <p className="text-sm font-semibold text-[var(--foreground)]">Ada Stores</p>
-            <p className="text-xs text-[var(--muted)]">Scan to pay</p>
-          </div>
-          <button className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-4 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:bg-slate-50">
-            <Download size={13} />
-            Download PNG
-          </button>
+          <QrDisplay url={shopUrl} businessName="Ada Stores" />
         </Card>
 
         {/* Details */}

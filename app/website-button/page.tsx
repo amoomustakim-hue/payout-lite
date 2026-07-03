@@ -1,4 +1,5 @@
-import { Globe, Copy, Code2, ExternalLink } from "lucide-react";
+import { Globe, Code2, ExternalLink } from "lucide-react";
+import { CopySnippet } from "@/components/website-button/copy-snippet";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAppUrl } from "@/lib/app-url";
@@ -65,10 +66,7 @@ export default function WebsiteButtonPage() {
               </div>
               <p className="font-semibold text-[var(--foreground)]">HTML snippet</p>
             </div>
-            <button className="flex items-center gap-1.5 text-xs font-medium text-[var(--payout-blue)] hover:underline">
-              <Copy size={12} />
-              Copy
-            </button>
+            <CopySnippet snippet={snippet} />
           </div>
           <pre className="overflow-x-auto rounded-lg bg-[var(--payout-navy)] p-4 text-xs leading-relaxed text-slate-300">
             {snippet}
