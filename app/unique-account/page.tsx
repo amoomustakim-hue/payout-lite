@@ -1,8 +1,10 @@
 import { Landmark } from "lucide-react";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getDb, hasDatabaseUrl } from "@/lib/db";
-import { getDemoBusiness } from "@/lib/demo-business";
+import { getCurrentBusiness } from "@/lib/auth/get-current-business";
 import { CreateVirtualAccountButton } from "@/components/unique-account/create-button";
 import { CopyAccountButton } from "@/components/unique-account/copy-account-button";
 
@@ -11,7 +13,8 @@ export const dynamic = "force-dynamic";
 async function getVirtualAccount() {
   if (!hasDatabaseUrl()) return null;
   try {
-    const business = await getDemoBusiness();
+    const business = await getCurrentBusiness();
+    if (!business) return null;
     return getDb().virtualAccount.findFirst({
       where: { businessId: business.id, active: true },
       orderBy: { createdAt: "desc" },
@@ -22,6 +25,9 @@ async function getVirtualAccount() {
 }
 
 export default async function UniqueAccountPage() {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
   const account = await getVirtualAccount();
   const copyText = account
     ? `Bank: ${account.bankName}\nAccount Number: ${account.accountNumber}\nAccount Name: ${account.accountName}`

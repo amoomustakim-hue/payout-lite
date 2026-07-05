@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb, hasDatabaseUrl } from "@/lib/db";
-import { getDemoBusiness } from "@/lib/demo-business";
+import { getOrCreateBusiness } from "@/lib/auth/get-current-business";
 import { createNombaVirtualAccount, getMissingNombaCheckoutEnvVars } from "@/lib/nomba";
 
 export async function createVirtualAccountAction(): Promise<{ error?: string }> {
@@ -13,11 +13,16 @@ export async function createVirtualAccountAction(): Promise<{ error?: string }> 
     return { error: "Nomba credentials (NOMBA_ACCOUNT_ID, NOMBA_CLIENT_ID, NOMBA_PRIVATE_KEY) are not configured." };
   }
 
+  let business;
+  try {
+    business = await getOrCreateBusiness();
+  } catch {
+    return { error: "You must be signed in to create a virtual account." };
+  }
+
   try {
     const db = getDb();
-    const business = await getDemoBusiness();
 
-    // Check if already exists
     const existing = await db.virtualAccount.findFirst({
       where: { businessId: business.id, active: true },
     });

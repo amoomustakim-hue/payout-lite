@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAppUrl } from "@/lib/app-url";
 import { getDb, hasDatabaseUrl } from "@/lib/db";
-import { getDemoBusiness } from "@/lib/demo-business";
+import { getOrCreateBusiness } from "@/lib/auth/get-current-business";
 
 function requiredString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -34,7 +34,7 @@ export async function createInvoiceAction(formData: FormData) {
 
   try {
     const db = getDb();
-    const business = await getDemoBusiness();
+    const business = await getOrCreateBusiness();
     const invoice = await db.invoice.create({
       data: {
         businessId: business.id,
