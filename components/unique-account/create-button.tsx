@@ -7,16 +7,22 @@ import { createVirtualAccountAction } from "@/app/unique-account/actions";
 export function CreateVirtualAccountButton() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [detail, setDetail] = useState<string | null>(null);
 
   function handleCreate() {
+    setError(null);
+    setDetail(null);
     startTransition(async () => {
       const result = await createVirtualAccountAction();
-      if (result.error) setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        setDetail(result.detail ?? null);
+      }
     });
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col items-center gap-2">
       <button
         onClick={handleCreate}
         disabled={isPending}
@@ -25,7 +31,12 @@ export function CreateVirtualAccountButton() {
         {isPending ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
         {isPending ? "Creating…" : "Create virtual account"}
       </button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && (
+        <div className="mt-1 max-w-xs rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-left text-xs text-red-700">
+          <p className="font-semibold">{error}</p>
+          {detail && <p className="mt-1 font-mono break-all text-red-500">{detail}</p>}
+        </div>
+      )}
     </div>
   );
 }

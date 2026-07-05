@@ -5,19 +5,22 @@ import { getDb, hasDatabaseUrl } from "@/lib/db";
 import { getOrCreateBusiness } from "@/lib/auth/get-current-business";
 import { createNombaVirtualAccount, getMissingNombaCheckoutEnvVars } from "@/lib/nomba";
 
-export async function createVirtualAccountAction(): Promise<{ error?: string }> {
+export async function createVirtualAccountAction(): Promise<{ error?: string; detail?: string }> {
   if (!hasDatabaseUrl()) {
     return { error: "DATABASE_URL is not configured." };
   }
-  if (getMissingNombaCheckoutEnvVars().length > 0) {
-    return { error: "Nomba credentials (NOMBA_ACCOUNT_ID, NOMBA_CLIENT_ID, NOMBA_PRIVATE_KEY) are not configured." };
+
+  const missing = getMissingNombaCheckoutEnvVars();
+  if (missing.length > 0) {
+    return { error: `Missing Nomba credentials: ${missing.join(", ")}` };
   }
 
   let business;
   try {
     business = await getOrCreateBusiness();
-  } catch {
-    return { error: "You must be signed in to create a virtual account." };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { error: "Authentication error — please sign out and sign back in.", detail: msg };
   }
 
   try {
@@ -32,12 +35,22 @@ export async function createVirtualAccountAction(): Promise<{ error?: string }> 
     }
 
     const reference = `va-${business.slug}-${Date.now()}`;
+
+    console.info("Creating Nomba virtual account", {
+      businessId: business.id,
+      businessName: business.name,
+      reference,
+      hasSubAccountId: Boolean(business.nombaSubAccountId),
+    });
+
     const result = await createNombaVirtualAccount({
       businessName: business.name,
       reference,
       customerEmail: business.email,
       subAccountId: business.nombaSubAccountId,
     });
+
+    console.info("Nomba virtual account result", { raw: result.raw });
 
     await db.virtualAccount.create({
       data: {
@@ -53,7 +66,11 @@ export async function createVirtualAccountAction(): Promise<{ error?: string }> 
     revalidatePath("/unique-account");
     return {};
   } catch (err) {
-    console.error("createVirtualAccountAction error:", err);
-    return { error: "Failed to create virtual account. Check Nomba credentials and try again." };
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("createVirtualAccountAction error:", msg);
+    return {
+      error: "Failed to create virtual account.",
+      detail: msg,
+    };
   }
 }

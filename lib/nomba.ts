@@ -204,15 +204,21 @@ export async function createNombaCheckoutOrder(input: CheckoutOrderInput): Promi
 
 export async function createNombaVirtualAccount(input: VirtualAccountInput): Promise<VirtualAccountResponse> {
   const subAccountId = input.subAccountId ?? getDefaultSubAccountId();
+  const body = {
+    accountName: input.businessName,
+    reference: input.reference,
+    customerEmail: input.customerEmail ?? undefined,
+    subAccountId: subAccountId ?? undefined,
+  };
+
+  console.info("Nomba virtual account request body", JSON.stringify(body));
+
   const raw = await nombaFetch<Record<string, unknown>>("/v1/accounts/virtual", {
     method: "POST",
-    body: JSON.stringify({
-      accountName: input.businessName,
-      reference: input.reference,
-      customerEmail: input.customerEmail,
-      subAccountId,
-    }),
+    body: JSON.stringify(body),
   });
+
+  console.info("Nomba virtual account raw response", JSON.stringify(raw));
 
   const data = asRecord(raw.data);
 
