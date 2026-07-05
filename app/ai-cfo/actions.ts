@@ -2,7 +2,7 @@
 
 import { getGroqClient } from "@/lib/groq";
 import { getDb, hasDatabaseUrl } from "@/lib/db";
-import { getDemoBusiness } from "@/lib/demo-business";
+import { getCurrentBusiness } from "@/lib/auth/get-current-business";
 import { formatNaira } from "@/lib/format";
 
 export async function askAiCfoAction(
@@ -20,7 +20,10 @@ export async function askAiCfoAction(
 
   try {
     const db = getDb();
-    const business = await getDemoBusiness();
+    const business = await getCurrentBusiness();
+    if (!business) {
+      return { answer: "", error: "No business profile found. Complete onboarding first." };
+    }
 
     const [transactions, invoices] = await Promise.all([
       db.transaction.findMany({
@@ -89,7 +92,6 @@ Overdue: ${invoices.filter((i) => i.status === "OVERDUE").length}
     const answer =
       completion.choices[0]?.message?.content?.trim() ?? "I couldn't generate a response. Please try again.";
 
-    // Save insight non-fatally
     try {
       await db.aiInsight.create({ data: { businessId: business.id, question, answer } });
     } catch {
