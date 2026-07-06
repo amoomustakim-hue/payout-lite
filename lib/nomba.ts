@@ -111,12 +111,12 @@ function extractCheckoutUrl(raw: Record<string, unknown>) {
   return firstStringField(raw, urlFields);
 }
 
-async function nombaFetch<T>(path: string, init: RequestInit = {}) {
+async function nombaFetch<T>(path: string, init: RequestInit = {}, accountIdOverride?: string) {
   const token = await getNombaAccessToken();
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);
   headers.set("Content-Type", "application/json");
-  headers.set("accountId", getParentAccountId());
+  headers.set("accountId", accountIdOverride ?? getParentAccountId());
 
   const response = await fetch(`${getNombaBaseUrl()}${path}`, {
     ...init,
@@ -204,19 +204,25 @@ export async function createNombaCheckoutOrder(input: CheckoutOrderInput): Promi
 
 export async function createNombaVirtualAccount(input: VirtualAccountInput): Promise<VirtualAccountResponse> {
   const subAccountId = input.subAccountId ?? getDefaultSubAccountId();
-  const body = {
+
+  // Nomba scopes virtual account creation to the sub-account — the accountId
+  // header must be the sub-account ID, not the parent account ID.
+  // If no subAccountId is configured, fall back to parent (will likely 403).
+  const accountIdForRequest = subAccountId ?? getParentAccountId();
+
+  const body: Record<string, unknown> = {
     accountName: input.businessName,
     reference: input.reference,
-    customerEmail: input.customerEmail ?? undefined,
-    subAccountId: subAccountId ?? undefined,
   };
+  if (input.customerEmail) body.customerEmail = input.customerEmail;
+  if (subAccountId) body.subAccountId = subAccountId;
 
-  console.info("Nomba virtual account request body", JSON.stringify(body));
+  console.info("Nomba virtual account request", JSON.stringify({ accountIdForRequest, body }));
 
   const raw = await nombaFetch<Record<string, unknown>>("/v1/accounts/virtual", {
     method: "POST",
     body: JSON.stringify(body),
-  });
+  }, accountIdForRequest);
 
   console.info("Nomba virtual account raw response", JSON.stringify(raw));
 
