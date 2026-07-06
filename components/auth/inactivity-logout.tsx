@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { LogOut, Clock } from "lucide-react";
 
-const TIMEOUT_MS = 30 * 60 * 1000;       // 30 minutes
-const WARNING_MS = TIMEOUT_MS - 2 * 60 * 1000; // show warning at 28 minutes
+const TIMEOUT_MS = 30 * 60 * 1000;
+const WARN_BEFORE_MS = 2 * 60 * 1000;
 
 const ACTIVITY_EVENTS = [
   "mousemove",
@@ -14,7 +14,6 @@ const ACTIVITY_EVENTS = [
   "touchstart",
   "scroll",
   "wheel",
-  "visibilitychange",
 ] as const;
 
 export function InactivityLogout() {
@@ -22,62 +21,71 @@ export function InactivityLogout() {
   const { signOut } = useClerk();
   const [showWarning, setShowWarning] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(120);
-  const logoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const clearTimers = useCallback(() => {
-    if (logoutTimer.current) clearTimeout(logoutTimer.current);
-    if (warningTimer.current) clearTimeout(warningTimer.current);
-    if (countdownInterval.current) clearInterval(countdownInterval.current);
-  }, []);
-
-  const startTimers = useCallback(() => {
-    clearTimers();
-    setShowWarning(false);
-
-    warningTimer.current = setTimeout(() => {
-      setShowWarning(true);
-      setSecondsLeft(120);
-      countdownInterval.current = setInterval(() => {
-        setSecondsLeft((s) => Math.max(0, s - 1));
-      }, 1000);
-    }, WARNING_MS);
-
-    logoutTimer.current = setTimeout(() => {
-      signOut({ redirectUrl: "/sign-in?reason=inactivity" });
-    }, TIMEOUT_MS);
-  }, [clearTimers, signOut]);
-
-  const resetActivity = useCallback(() => {
-    if (showWarning) return; // don't reset once warning is shown
-    startTimers();
-  }, [showWarning, startTimers]);
+  // All mutable state lives in refs so the effect never needs to re-run
+  const lastActivityAt = useRef(Date.now());
+  const warningShown = useRef(false);
+  const didSignOut = useRef(false);
+  // Keep a stable ref to signOut so the interval always calls the latest version
+  const signOutRef = useRef(signOut);
+  useEffect(() => { signOutRef.current = signOut; });
 
   useEffect(() => {
     if (!isSignedIn) return;
 
-    startTimers();
+    lastActivityAt.current = Date.now();
+    warningShown.current = false;
+    didSignOut.current = false;
 
-    for (const event of ACTIVITY_EVENTS) {
-      window.addEventListener(event, resetActivity, { passive: true });
+    function onActivity() {
+      if (warningShown.current) return;
+      lastActivityAt.current = Date.now();
     }
 
+    for (const ev of ACTIVITY_EVENTS) {
+      window.addEventListener(ev, onActivity, { passive: true });
+    }
+
+    const interval = setInterval(() => {
+      if (didSignOut.current) return;
+
+      const idle = Date.now() - lastActivityAt.current;
+      const remaining = Math.max(0, TIMEOUT_MS - idle);
+
+      if (idle >= TIMEOUT_MS) {
+        didSignOut.current = true;
+        clearInterval(interval);
+        signOutRef.current({ redirectUrl: "/sign-in?reason=inactivity" });
+        return;
+      }
+
+      if (remaining <= WARN_BEFORE_MS && !warningShown.current) {
+        warningShown.current = true;
+        setShowWarning(true);
+      }
+
+      if (warningShown.current) {
+        setSecondsLeft(Math.ceil(remaining / 1000));
+      }
+    }, 1000);
+
     return () => {
-      clearTimers();
-      for (const event of ACTIVITY_EVENTS) {
-        window.removeEventListener(event, resetActivity);
+      clearInterval(interval);
+      for (const ev of ACTIVITY_EVENTS) {
+        window.removeEventListener(ev, onActivity);
       }
     };
-  }, [isSignedIn, startTimers, resetActivity, clearTimers]);
+  }, [isSignedIn]); // stable — no function deps that change
 
   function staySignedIn() {
+    warningShown.current = false;
+    lastActivityAt.current = Date.now();
     setShowWarning(false);
-    startTimers();
+    setSecondsLeft(120);
   }
 
   function logOutNow() {
-    clearTimers();
+    didSignOut.current = true;
     signOut({ redirectUrl: "/sign-in" });
   }
 
@@ -89,7 +97,6 @@ export function InactivityLogout() {
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl">
-        {/* Header */}
         <div className="bg-amber-50 px-6 py-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100">
@@ -97,14 +104,11 @@ export function InactivityLogout() {
             </div>
             <div>
               <p className="font-bold text-slate-900">Session expiring</p>
-              <p className="text-sm text-amber-700">
-                You have been inactive for a while
-              </p>
+              <p className="text-sm text-amber-700">You have been inactive for a while</p>
             </div>
           </div>
         </div>
 
-        {/* Body */}
         <div className="px-6 py-5">
           <p className="text-sm text-slate-600 leading-relaxed">
             For security, you will be automatically signed out in:
@@ -117,7 +121,6 @@ export function InactivityLogout() {
           </p>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
           <button
             onClick={logOutNow}

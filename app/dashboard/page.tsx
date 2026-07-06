@@ -113,13 +113,12 @@ export default async function DashboardPage() {
   const data = await getDashboardData();
 
   return (
-    /* Full-bleed gradient backdrop — only on mobile the main area switches to gradient */
-    <div className="relative -mx-5 -mt-6 px-5 pt-6 pb-8 lg:-mx-8 lg:px-8">
-      {/* Decorative gradient blobs (mobile-first glassmorphism feel) */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-32 -right-20 h-96 w-96 rounded-full bg-blue-400/10 blur-3xl" />
-        <div className="absolute top-40 -left-24 h-80 w-80 rounded-full bg-indigo-400/8 blur-3xl" />
-        <div className="absolute bottom-0 right-1/3 h-64 w-64 rounded-full bg-emerald-300/6 blur-3xl" />
+    <div className="relative">
+      {/* Decorative gradient blobs — clipped to this container, no overflow */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+        <div className="absolute -top-16 -right-16 h-72 w-72 rounded-full bg-blue-400/10 blur-3xl" />
+        <div className="absolute top-40 -left-16 h-64 w-64 rounded-full bg-indigo-400/8 blur-3xl" />
+        <div className="absolute bottom-8 right-1/3 h-48 w-48 rounded-full bg-emerald-300/6 blur-3xl" />
       </div>
 
       {/* Page title */}
