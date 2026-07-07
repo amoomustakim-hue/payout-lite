@@ -37,7 +37,7 @@ export default function SupportPage() {
             {
               icon: Mail,
               title: "Email support",
-              desc: "twizrrapp@gmail.com",
+              desc: "amoomustakim@gmail.com",
             },
             {
               icon: Clock,

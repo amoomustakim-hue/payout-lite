@@ -25,7 +25,7 @@ export async function sendSupportMessageAction(
   try {
     await resend.emails.send({
       from: "Payout Lite Support <invoices@payoutlite.app>",
-      to: ["twizrrapp@gmail.com"],
+      to: ["amoomustakim@gmail.com"],
       replyTo: email,
       subject: `[Payout Lite Support] ${subject}`,
       html: `
