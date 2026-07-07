@@ -1,4 +1,4 @@
-import { FileText, Plus, Send, Link2, BarChart3, RefreshCw } from "lucide-react";
+import { FileText, Plus, Send, Link2, BarChart3, RefreshCw, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { CustomerAvatar } from "@/components/ui/customer-avatar";
-import { CopyInvoiceLink } from "@/components/invoices/copy-invoice-link";
+import { ShareInvoice } from "@/components/invoices/share-invoice";
 import { createInvoiceAction } from "@/app/invoices/actions";
 import { formatNaira } from "@/lib/format";
 import { getAppUrl } from "@/lib/app-url";
@@ -152,8 +152,17 @@ const quickActions = [
   { icon: BarChart3, label: "Revenue Insights", description: "Track your growth with detailed reports on paid vs pending invoices.", color: "bg-white", textColor: "text-[var(--foreground)]", descColor: "text-[var(--muted)]" },
 ];
 
-export default async function InvoicesPage() {
+export default async function InvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ created?: string }>;
+}) {
   const { invoices, databaseReady } = await getInvoices();
+  const { created } = await searchParams;
+  const createdInvoice = created ? invoices.find((inv) => inv.id === created) : undefined;
+  const createdUrl = createdInvoice
+    ? createdInvoice.paymentUrl ?? `${getAppUrl()}/pay/invoice/${createdInvoice.id}`
+    : null;
 
   return (
     <div>
@@ -167,6 +176,27 @@ export default async function InvoicesPage() {
           </a>
         }
       />
+
+      {createdInvoice && createdUrl && (
+        <Card className="mb-5 border-emerald-200 bg-emerald-50/60">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+              <CheckCircle2 size={18} className="text-emerald-600" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-[var(--foreground)]">
+                Invoice created for {createdInvoice.customerName} — {formatNaira(createdInvoice.amount)}
+              </p>
+              <p className="mt-0.5 text-sm text-[var(--muted)]">
+                Share this payment link with your customer. Anyone with the link can pay — no login required.
+              </p>
+              <div className="mt-3">
+                <ShareInvoice url={createdUrl} customerName={createdInvoice.customerName} />
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {!databaseReady && (
         <div className="mb-5 rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm">
@@ -216,7 +246,7 @@ export default async function InvoicesPage() {
                 <table className="w-full min-w-[560px] text-left text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)]">
-                      {["Invoice ID", "Customer", "Amount", "Due Date", "Type"].map((h) => (
+                      {["Invoice ID", "Customer", "Amount", "Due Date", "Type", "Payment link"].map((h) => (
                         <th key={h} className="pb-3 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                           {h}
                         </th>
@@ -269,9 +299,7 @@ export default async function InvoicesPage() {
                             )}
                           </td>
                           <td className="py-3">
-                            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                              <CopyInvoiceLink url={paymentUrl} />
-                            </div>
+                            <ShareInvoice url={paymentUrl} customerName={invoice.customerName} compact />
                           </td>
                         </tr>
                       );
