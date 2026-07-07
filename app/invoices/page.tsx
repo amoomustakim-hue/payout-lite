@@ -1,5 +1,5 @@
 import { InvoiceStatus } from "@prisma/client";
-import { FileText, Plus, Send, Link2, BarChart3 } from "lucide-react";
+import { FileText, Plus, Send, Link2, BarChart3, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,6 +26,8 @@ type InvoiceRow = {
   dueDate: Date | null;
   status: InvoiceStatus;
   paymentUrl: string | null;
+  isRecurring: boolean;
+  recurringDays: number | null;
 };
 
 type InvoiceState = {
@@ -44,7 +46,7 @@ async function getInvoices(): Promise<InvoiceState> {
     });
     return {
       databaseReady: true,
-      invoices: invoices.map((inv) => ({ ...inv, amount: inv.amount.toString() })),
+      invoices: invoices.map((inv) => ({ ...inv, amount: inv.amount.toString(), isRecurring: inv.isRecurring, recurringDays: inv.recurringDays })),
     };
   } catch {
     return { databaseReady: false, invoices: [] };
@@ -110,6 +112,33 @@ function InvoiceForm({ databaseReady }: { databaseReady: boolean }) {
           disabled={!databaseReady}
         />
       </div>
+      {/* Recurring toggle */}
+      <div className="rounded-lg border border-[var(--border)] bg-slate-50 p-3">
+        <label className="flex cursor-pointer items-center gap-2.5">
+          <input type="checkbox" name="isRecurring" id="isRecurring" className="h-4 w-4 rounded accent-[var(--payout-blue)]" disabled={!databaseReady} />
+          <div>
+            <p className="text-sm font-semibold text-[var(--foreground)]">Recurring invoice</p>
+            <p className="text-xs text-[var(--muted)]">Auto-generate this invoice on a schedule</p>
+          </div>
+          <RefreshCw size={13} className="ml-auto text-[var(--muted)]" />
+        </label>
+        <div className="mt-2.5 grid gap-1.5">
+          <Label htmlFor="recurringDays" className="text-xs">Repeat every</Label>
+          <select
+            id="recurringDays"
+            name="recurringDays"
+            disabled={!databaseReady}
+            className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--payout-blue)] focus:outline-none"
+          >
+            <option value="7">7 days (weekly)</option>
+            <option value="14">14 days (bi-weekly)</option>
+            <option value="30" selected>30 days (monthly)</option>
+            <option value="60">60 days (bi-monthly)</option>
+            <option value="90">90 days (quarterly)</option>
+          </select>
+        </div>
+      </div>
+
       <button
         className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--payout-blue)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--payout-blue-dark)] disabled:cursor-not-allowed disabled:bg-slate-300"
         disabled={!databaseReady}
@@ -202,7 +231,7 @@ export default async function InvoicesPage() {
                 <table className="w-full min-w-[560px] text-left text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)]">
-                      {["Invoice ID", "Customer", "Amount", "Due Date"].map((h) => (
+                      {["Invoice ID", "Customer", "Amount", "Due Date", "Type"].map((h) => (
                         <th key={h} className="pb-3 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                           {h}
                         </th>
@@ -243,6 +272,16 @@ export default async function InvoicesPage() {
                             {invoice.dueDate
                               ? invoice.dueDate.toLocaleDateString("en-NG", { day: "2-digit", month: "2-digit", year: "numeric" })
                               : "—"}
+                          </td>
+                          <td className="py-3">
+                            {invoice.isRecurring ? (
+                              <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-[var(--payout-blue)]">
+                                <RefreshCw size={9} />
+                                Every {invoice.recurringDays}d
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400">One-time</span>
+                            )}
                           </td>
                           <td className="py-3">
                             <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">

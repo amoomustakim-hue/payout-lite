@@ -28,6 +28,9 @@ export async function createInvoiceAction(formData: FormData) {
   const amount = Number(requiredString(formData, "amount"));
   const description = requiredString(formData, "description");
   const dueDateValue = formData.get("dueDate");
+  const isRecurring = formData.get("isRecurring") === "on";
+  const recurringDaysRaw = formData.get("recurringDays");
+  const recurringDays = isRecurring && recurringDaysRaw ? Number(recurringDaysRaw) : null;
 
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error("amount must be greater than zero");
@@ -53,6 +56,8 @@ export async function createInvoiceAction(formData: FormData) {
         description,
         dueDate: typeof dueDateValue === "string" && dueDateValue ? new Date(dueDateValue) : null,
         status: InvoiceStatus.UNPAID,
+        isRecurring,
+        recurringDays,
       },
     });
 
