@@ -92,10 +92,17 @@ export async function POST(request: NextRequest) {
     request.headers.get("x-signature");
   const signatureValid = verifyNombaWebhook(rawBody, signature);
 
+  console.info("[nomba-webhook] received", {
+    bytes: rawBody.length,
+    hasSignature: Boolean(signature),
+    signatureValid,
+  });
+
   let payload: NombaWebhookPayload;
   try {
     payload = JSON.parse(rawBody) as NombaWebhookPayload;
   } catch {
+    console.error("[nomba-webhook] invalid JSON payload");
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
@@ -240,7 +247,16 @@ export async function POST(request: NextRequest) {
       data: { processedAt: new Date() },
     });
 
-    return { duplicate: false, transactionUpdated };
+    return { duplicate: false, transactionUpdated, matched: Boolean(transaction) };
+  });
+
+  console.info("[nomba-webhook] processed", {
+    eventType,
+    paymentReference,
+    responseCode,
+    providerStatus,
+    nextStatus,
+    ...result,
   });
 
   return NextResponse.json({
