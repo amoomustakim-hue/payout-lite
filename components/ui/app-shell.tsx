@@ -17,6 +17,7 @@ import {
   Shield,
   Menu,
   Webhook,
+  HeadphonesIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { UserButton } from "@clerk/nextjs";
@@ -30,6 +31,7 @@ const navItems = [
   { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
   { label: "Webhooks", href: "/webhooks", icon: Webhook },
   { label: "AI CFO", href: "/ai-cfo", icon: Sparkles },
+  { label: "Support", href: "/support", icon: HeadphonesIcon },
   { label: "Settings", href: "/onboarding", icon: Settings2 },
 ];
 
