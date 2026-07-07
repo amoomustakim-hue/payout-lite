@@ -6,36 +6,20 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { CustomerAvatar } from "@/components/ui/customer-avatar";
 import { formatNaira } from "@/lib/format";
-import { getDb, hasDatabaseUrl } from "@/lib/db";
+import { hasDatabaseUrl } from "@/lib/db";
+import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { listTransactions } from "@/lib/data/transactions";
+import { sourceLabel } from "@/lib/presenters/source-label";
+import { formatRelative } from "@/lib/presenters/format-relative";
 
 export const dynamic = "force-dynamic";
-
-const SOURCE_LABELS: Record<string, string> = {
-  INVOICE: "Invoice",
-  WEBSITE_BUTTON: "Website Button",
-  SHOP_QR: "Shop QR",
-  UNIQUE_ACCOUNT: "Unique Account",
-};
-
-function formatRelative(date: Date) {
-  const diff = Date.now() - date.getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 2) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return "Yesterday";
-  return date.toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" });
-}
 
 async function getTransactions() {
   if (!hasDatabaseUrl()) return { transactions: [], databaseReady: false };
   try {
-    const transactions = await getDb().transaction.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    });
+    const business = await getCurrentBusiness();
+    if (!business) return { transactions: [], databaseReady: true };
+    const transactions = await listTransactions(business.id);
     return { transactions, databaseReady: true };
   } catch {
     return { transactions: [], databaseReady: false };
@@ -96,7 +80,7 @@ export default async function TransactionsPage() {
                       </div>
                     </td>
                     <td className="py-3 text-[var(--muted)]">
-                      {SOURCE_LABELS[row.source] ?? row.source}
+                      {sourceLabel(row.source)}
                     </td>
                     <td className="py-3 font-semibold text-[var(--foreground)]">
                       {formatNaira(row.amount.toString())}

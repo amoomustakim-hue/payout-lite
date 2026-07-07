@@ -1,4 +1,3 @@
-import { TransactionStatus } from "@prisma/client";
 import {
   TrendingUp,
   Clock,
@@ -14,121 +13,16 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { CustomerAvatar } from "@/components/ui/customer-avatar";
 import { formatNaira } from "@/lib/format";
-import { getDb } from "@/lib/db";
+import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { getDashboardData, EMPTY_DASHBOARD, type DashboardData, type SourceStat } from "@/lib/data/dashboard";
+import { sourceLabel } from "@/lib/presenters/source-label";
+import { formatRelative } from "@/lib/presenters/format-relative";
 
 export const dynamic = "force-dynamic";
 
-type SourceStat = { source: string; amount: number; count: number };
-
-type DashboardData = {
-  databaseReady: boolean;
-  totalReceived: number;
-  pendingAmount: number;
-  failedCount: number;
-  paidCount: number;
-  invoiceCount: number;
-  unpaidInvoiceCount: number;
-  sourceStats: SourceStat[];
-  recent: Array<{
-    reference: string;
-    source: string;
-    status: string;
-    amount: string;
-    customerName: string | null;
-    createdAt: Date;
-  }>;
-};
-
-async function getDashboardData(): Promise<DashboardData> {
-  try {
-    const db = getDb();
-    const [
-      paidAggregate,
-      pendingAggregate,
-      failedCount,
-      paidCount,
-      invoiceCount,
-      unpaidInvoiceCount,
-      sourceGroups,
-      recent,
-    ] = await Promise.all([
-      db.transaction.aggregate({ where: { status: TransactionStatus.PAID }, _sum: { amount: true } }),
-      db.transaction.aggregate({ where: { status: TransactionStatus.PENDING }, _sum: { amount: true } }),
-      db.transaction.count({ where: { status: TransactionStatus.FAILED } }),
-      db.transaction.count({ where: { status: TransactionStatus.PAID } }),
-      db.invoice.count(),
-      db.invoice.count({ where: { status: { in: ["UNPAID", "PENDING", "OVERDUE"] } } }),
-      db.transaction.groupBy({
-        by: ["source"],
-        where: { status: TransactionStatus.PAID },
-        _sum: { amount: true },
-        _count: { _all: true },
-      }),
-      db.transaction.findMany({ orderBy: { createdAt: "desc" }, take: 8 }),
-    ]);
-
-    const sourceStats: SourceStat[] = sourceGroups.map((g) => ({
-      source: g.source,
-      amount: Number(g._sum.amount ?? 0),
-      count: g._count._all,
-    }));
-
-    return {
-      databaseReady: true,
-      totalReceived: Number(paidAggregate._sum.amount ?? 0),
-      pendingAmount: Number(pendingAggregate._sum.amount ?? 0),
-      failedCount,
-      paidCount,
-      invoiceCount,
-      unpaidInvoiceCount,
-      sourceStats,
-      recent: recent.map((t) => ({
-        reference: t.reference,
-        source: t.source,
-        status: t.status,
-        amount: t.amount.toString(),
-        customerName: t.customerName,
-        createdAt: t.createdAt,
-      })),
-    };
-  } catch {
-    return {
-      databaseReady: false,
-      totalReceived: 0,
-      pendingAmount: 0,
-      failedCount: 0,
-      paidCount: 0,
-      invoiceCount: 0,
-      unpaidInvoiceCount: 0,
-      sourceStats: [],
-      recent: [],
-    };
-  }
-}
-
-function sourceLabel(source: string) {
-  const map: Record<string, string> = {
-    INVOICE: "Invoice",
-    WEBSITE_BUTTON: "Website Button",
-    SHOP_QR: "Shop QR",
-    UNIQUE_ACCOUNT: "Unique Account",
-  };
-  return map[source] ?? source;
-}
-
-function formatRelative(date: Date) {
-  const diff = Date.now() - date.getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return "Yesterday";
-  return `${days}d ago`;
-}
-
 export default async function DashboardPage() {
-  const data = await getDashboardData();
+  const business = await getCurrentBusiness();
+  const data = business ? await getDashboardData(business.id) : EMPTY_DASHBOARD;
 
   return (
     <div className="relative">
