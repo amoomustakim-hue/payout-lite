@@ -3,8 +3,9 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { getDb, hasDatabaseUrl } from "@/lib/db";
+import { hasDatabaseUrl } from "@/lib/db";
 import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { getActiveVirtualAccount } from "@/lib/data/virtual-account";
 import { CreateVirtualAccountButton } from "@/components/unique-account/create-button";
 import { CopyAccountButton } from "@/components/unique-account/copy-account-button";
 
@@ -15,10 +16,7 @@ async function getVirtualAccount() {
   try {
     const business = await getCurrentBusiness();
     if (!business) return null;
-    return getDb().virtualAccount.findFirst({
-      where: { businessId: business.id, active: true },
-      orderBy: { createdAt: "desc" },
-    });
+    return getActiveVirtualAccount(business.id);
   } catch {
     return null;
   }

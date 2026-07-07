@@ -2,46 +2,24 @@ import { CheckCircle2, XCircle, Clock, Webhook } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { getDb, hasDatabaseUrl } from "@/lib/db";
+import { hasDatabaseUrl } from "@/lib/db";
 import { formatNaira } from "@/lib/format";
+import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { listWebhookEvents } from "@/lib/data/webhooks";
+import { sourceLabel } from "@/lib/presenters/source-label";
+import { formatRelative } from "@/lib/presenters/format-relative";
 
 export const dynamic = "force-dynamic";
 
 async function getEvents() {
   if (!hasDatabaseUrl()) return [];
   try {
-    return await getDb().webhookEvent.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 100,
-      include: {
-        transaction: {
-          select: { reference: true, amount: true, source: true, customerName: true },
-        },
-      },
-    });
+    const business = await getCurrentBusiness();
+    if (!business) return [];
+    return await listWebhookEvents(business.id);
   } catch {
     return [];
   }
-}
-
-function formatRelative(date: Date) {
-  const diff = Date.now() - date.getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
-function sourceLabel(source: string) {
-  const map: Record<string, string> = {
-    INVOICE: "Invoice",
-    WEBSITE_BUTTON: "Website Button",
-    SHOP_QR: "Shop QR",
-    UNIQUE_ACCOUNT: "Unique Account",
-  };
-  return map[source] ?? source;
 }
 
 export default async function WebhooksPage() {

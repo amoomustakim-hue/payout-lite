@@ -4,24 +4,19 @@ import { ArrowLeft, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { PrintButton } from "./print-button";
 import { Card } from "@/components/ui/card";
 import { formatNaira } from "@/lib/format";
-import { getDb, hasDatabaseUrl } from "@/lib/db";
+import { hasDatabaseUrl } from "@/lib/db";
+import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { getTransactionForBusiness } from "@/lib/data/transactions";
+import { sourceLabel } from "@/lib/presenters/source-label";
 
 export const dynamic = "force-dynamic";
 
-const SOURCE_LABELS: Record<string, string> = {
-  INVOICE: "Invoice",
-  WEBSITE_BUTTON: "Website Button",
-  SHOP_QR: "Shop QR",
-  UNIQUE_ACCOUNT: "Unique Account",
-};
-
-async function getTransaction(id: string) {
+async function getReceipt(id: string) {
   if (!hasDatabaseUrl()) return null;
   try {
-    return await getDb().transaction.findUnique({
-      where: { id },
-      include: { invoice: true, business: true },
-    });
+    const business = await getCurrentBusiness();
+    if (!business) return null;
+    return await getTransactionForBusiness(id, business.id);
   } catch {
     return null;
   }
@@ -33,7 +28,7 @@ export default async function TransactionReceiptPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const tx = await getTransaction(id);
+  const tx = await getReceipt(id);
 
   if (!tx) notFound();
 
@@ -58,7 +53,7 @@ export default async function TransactionReceiptPage({
     ["Business", tx.business?.name ?? "—"],
     ["Customer", tx.customerName ?? "—"],
     ["Email", tx.customerEmail ?? "—"],
-    ["Source", SOURCE_LABELS[tx.source] ?? tx.source],
+    ["Source", sourceLabel(tx.source)],
     ["Reference", tx.reference],
     ...(tx.providerReference ? [["Provider Ref", tx.providerReference] as [string, string]] : []),
     ["Currency", tx.currency],

@@ -1,4 +1,3 @@
-import { InvoiceStatus } from "@prisma/client";
 import { FileText, Plus, Send, Link2, BarChart3, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -13,22 +12,12 @@ import { CopyInvoiceLink } from "@/components/invoices/copy-invoice-link";
 import { createInvoiceAction } from "@/app/invoices/actions";
 import { formatNaira } from "@/lib/format";
 import { getAppUrl } from "@/lib/app-url";
-import { getDb, hasDatabaseUrl } from "@/lib/db";
+import { hasDatabaseUrl } from "@/lib/db";
+import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { listInvoices, type InvoiceRow } from "@/lib/data/invoices";
+import { invoiceNumber } from "@/lib/presenters/invoice-number";
 
 export const dynamic = "force-dynamic";
-
-type InvoiceRow = {
-  id: string;
-  customerName: string;
-  customerEmail: string;
-  amount: string;
-  description: string | null;
-  dueDate: Date | null;
-  status: InvoiceStatus;
-  paymentUrl: string | null;
-  isRecurring: boolean;
-  recurringDays: number | null;
-};
 
 type InvoiceState = {
   invoices: InvoiceRow[];
@@ -40,14 +29,10 @@ async function getInvoices(): Promise<InvoiceState> {
     return { databaseReady: false, invoices: [] };
   }
   try {
-    const invoices = await getDb().invoice.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 25,
-    });
-    return {
-      databaseReady: true,
-      invoices: invoices.map((inv) => ({ ...inv, amount: inv.amount.toString(), isRecurring: inv.isRecurring, recurringDays: inv.recurringDays })),
-    };
+    const business = await getCurrentBusiness();
+    if (!business) return { databaseReady: true, invoices: [] };
+    const invoices = await listInvoices(business.id);
+    return { databaseReady: true, invoices };
   } catch {
     return { databaseReady: false, invoices: [] };
   }
@@ -241,7 +226,7 @@ export default async function InvoicesPage() {
                   <tbody>
                     {invoices.map((invoice, idx) => {
                       const paymentUrl = invoice.paymentUrl ?? `${getAppUrl()}/pay/invoice/${invoice.id}`;
-                      const invNum = `#INV-${String(idx + 1).padStart(3, "0")}`;
+                      const invNum = invoiceNumber(idx + 1);
                       return (
                         <tr key={invoice.id} className="group border-b border-[var(--border)] last:border-0">
                           <td className="py-3">
