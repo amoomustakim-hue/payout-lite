@@ -37,7 +37,7 @@ export default function SupportPage() {
             {
               icon: Mail,
               title: "Email support",
-              desc: "amoomustakim@gmail.com",
+              desc: process.env.SUPPORT_EMAIL ?? "amoomustakim@gmail.com",
             },
             {
               icon: Clock,

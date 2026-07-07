@@ -1,5 +1,6 @@
 import "server-only";
 import crypto from "node:crypto";
+import { getAppUrl } from "@/lib/app-url";
 
 type NombaTokenResponse = {
   access_token?: string;
@@ -70,9 +71,6 @@ function getDefaultSubAccountId() {
   return process.env.NOMBA_SUB_ACCOUNT_ID || undefined;
 }
 
-function getAppUrl() {
-  return env("NEXT_PUBLIC_APP_URL", "http://localhost:3000").replace(/\/$/, "");
-}
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};

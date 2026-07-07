@@ -3,10 +3,13 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAppUrl } from "@/lib/app-url";
 import { QrDisplay } from "@/components/shop-qr/qr-display";
+import { getCurrentBusiness } from "@/lib/auth/get-current-business";
 
-export default function ShopQrPage() {
+export default async function ShopQrPage() {
   const appUrl = getAppUrl();
-  const shopUrl = `${appUrl}/pay/shop/ada-stores`;
+  const business = await getCurrentBusiness();
+  const shopUrl = business ? `${appUrl}/pay/shop/${business.slug}` : "";
+  const businessName = business?.name ?? "My Shop";
 
   return (
     <div>
@@ -15,10 +18,22 @@ export default function ShopQrPage() {
         description="Print a QR code for your shop. Customers scan to pay any amount via Nomba Checkout."
       />
 
+      {!business && (
+        <div className="mb-5 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Complete your business setup in <a href="/onboarding" className="font-semibold underline">Settings</a> to generate your QR code.
+        </div>
+      )}
+
       <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
         {/* QR display */}
         <Card className="flex flex-col items-center gap-4 py-8">
-          <QrDisplay url={shopUrl} businessName="Ada Stores" />
+          {business ? (
+            <QrDisplay url={shopUrl} businessName={businessName} />
+          ) : (
+            <div className="flex h-48 w-48 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 text-sm text-slate-400">
+              No business yet
+            </div>
+          )}
         </Card>
 
         {/* Details */}
@@ -30,12 +45,16 @@ export default function ShopQrPage() {
               </div>
               <p className="font-semibold text-[var(--foreground)]">Shop payment link</p>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-slate-50 px-3 py-3">
-              <p className="flex-1 truncate text-sm font-medium text-[var(--payout-blue)]">{shopUrl}</p>
-              <a href={shopUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-slate-400 hover:text-slate-600">
-                <ExternalLink size={14} />
-              </a>
-            </div>
+            {business ? (
+              <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-slate-50 px-3 py-3">
+                <p className="flex-1 truncate text-sm font-medium text-[var(--payout-blue)]">{shopUrl}</p>
+                <a href={shopUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-slate-400 hover:text-slate-600">
+                  <ExternalLink size={14} />
+                </a>
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--muted)]">Set up your business to get a payment link.</p>
+            )}
           </Card>
 
           <div className="rounded-xl border border-[var(--border)] bg-slate-50 p-5">
