@@ -71,6 +71,8 @@ model Invoice {
   dueDate       DateTime?
   status        InvoiceStatus @default(UNPAID)
   paymentUrl    String?
+  isRecurring   Boolean       @default(false)
+  recurringDays Int?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   business      Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)

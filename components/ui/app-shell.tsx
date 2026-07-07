@@ -16,6 +16,7 @@ import {
   Plus,
   Shield,
   Menu,
+  Webhook,
 } from "lucide-react";
 import { useState } from "react";
 import { UserButton } from "@clerk/nextjs";
@@ -27,6 +28,7 @@ const navItems = [
   { label: "Shop QR", href: "/shop-qr", icon: QrCode },
   { label: "Unique Account", href: "/unique-account", icon: Landmark },
   { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
+  { label: "Webhooks", href: "/webhooks", icon: Webhook },
   { label: "AI CFO", href: "/ai-cfo", icon: Sparkles },
   { label: "Settings", href: "/onboarding", icon: Settings2 },
 ];
