@@ -18,6 +18,8 @@ import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+type SourceStat = { source: string; amount: number; count: number };
+
 type DashboardData = {
   databaseReady: boolean;
   totalReceived: number;
@@ -26,6 +28,7 @@ type DashboardData = {
   paidCount: number;
   invoiceCount: number;
   unpaidInvoiceCount: number;
+  sourceStats: SourceStat[];
   recent: Array<{
     reference: string;
     source: string;
@@ -46,6 +49,7 @@ async function getDashboardData(): Promise<DashboardData> {
       paidCount,
       invoiceCount,
       unpaidInvoiceCount,
+      sourceGroups,
       recent,
     ] = await Promise.all([
       db.transaction.aggregate({ where: { status: TransactionStatus.PAID }, _sum: { amount: true } }),
@@ -54,8 +58,20 @@ async function getDashboardData(): Promise<DashboardData> {
       db.transaction.count({ where: { status: TransactionStatus.PAID } }),
       db.invoice.count(),
       db.invoice.count({ where: { status: { in: ["UNPAID", "PENDING", "OVERDUE"] } } }),
+      db.transaction.groupBy({
+        by: ["source"],
+        where: { status: TransactionStatus.PAID },
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
       db.transaction.findMany({ orderBy: { createdAt: "desc" }, take: 8 }),
     ]);
+
+    const sourceStats: SourceStat[] = sourceGroups.map((g) => ({
+      source: g.source,
+      amount: Number(g._sum.amount ?? 0),
+      count: g._count._all,
+    }));
 
     return {
       databaseReady: true,
@@ -65,6 +81,7 @@ async function getDashboardData(): Promise<DashboardData> {
       paidCount,
       invoiceCount,
       unpaidInvoiceCount,
+      sourceStats,
       recent: recent.map((t) => ({
         reference: t.reference,
         source: t.source,
@@ -83,6 +100,7 @@ async function getDashboardData(): Promise<DashboardData> {
       paidCount: 0,
       invoiceCount: 0,
       unpaidInvoiceCount: 0,
+      sourceStats: [],
       recent: [],
     };
   }
@@ -185,22 +203,7 @@ export default async function DashboardPage() {
               <span className="text-slate-300">▼</span>
             </button>
           </div>
-          <div className="flex h-40 items-end gap-3 sm:gap-4 px-1 pb-1">
-            {[
-              { label: "Invoices", h: 72, color: "bg-blue-500" },
-              { label: "Buttons", h: 40, color: "bg-indigo-400" },
-              { label: "Shop QR", h: 55, color: "bg-emerald-500" },
-              { label: "Account", h: 80, color: "bg-violet-500" },
-            ].map(({ label, h, color }) => (
-              <div key={label} className="flex flex-1 flex-col items-center gap-2">
-                <div
-                  className={`w-full rounded-t-xl opacity-80 ${color}`}
-                  style={{ height: `${h}%` }}
-                />
-                <span className="text-[10px] font-medium text-slate-400">{label}</span>
-              </div>
-            ))}
-          </div>
+          <ChartBars sourceStats={data.sourceStats} />
         </div>
 
         {/* AI CFO insight — gradient glass */}
@@ -214,12 +217,7 @@ export default async function DashboardPage() {
                 AI CFO
               </span>
             </div>
-            <p className="text-base font-bold leading-snug sm:text-lg">
-              Shop QR payments are growing fast — promote them offline.
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-blue-100/90">
-              Most confirmed revenue came from invoices this week. Walk-in customers are your next growth lever.
-            </p>
+            <AiCfoInsight data={data} />
             <ButtonLink
               href="/ai-cfo"
               variant="secondary"
@@ -294,5 +292,74 @@ export default async function DashboardPage() {
         )}
       </div>
     </div>
+  );
+}
+
+const SOURCE_CONFIG: Record<string, { label: string; color: string }> = {
+  INVOICE:        { label: "Invoices",  color: "bg-blue-500" },
+  WEBSITE_BUTTON: { label: "Buttons",   color: "bg-indigo-400" },
+  SHOP_QR:        { label: "Shop QR",   color: "bg-emerald-500" },
+  UNIQUE_ACCOUNT: { label: "Account",   color: "bg-violet-500" },
+};
+
+function ChartBars({ sourceStats }: { sourceStats: SourceStat[] }) {
+  const allSources = ["INVOICE", "WEBSITE_BUTTON", "SHOP_QR", "UNIQUE_ACCOUNT"];
+  const maxAmount = Math.max(...sourceStats.map((s) => s.amount), 1);
+
+  return (
+    <div className="flex h-40 items-end gap-3 sm:gap-4 px-1 pb-1">
+      {allSources.map((src) => {
+        const stat = sourceStats.find((s) => s.source === src);
+        const pct = stat ? Math.max(Math.round((stat.amount / maxAmount) * 100), 4) : 4;
+        const { label, color } = SOURCE_CONFIG[src];
+        return (
+          <div key={src} className="flex flex-1 flex-col items-center gap-2">
+            <div
+              className={`w-full rounded-t-xl opacity-80 ${color} transition-all duration-700`}
+              style={{ height: `${pct}%` }}
+              title={stat ? `${label}: ₦${stat.amount.toLocaleString("en-NG")} (${stat.count} txns)` : `${label}: ₦0`}
+            />
+            <span className="text-[10px] font-medium text-slate-400">{label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AiCfoInsight({ data }: { data: DashboardData }) {
+  if (!data.databaseReady || data.totalReceived === 0) {
+    return (
+      <>
+        <p className="text-base font-bold leading-snug sm:text-lg">
+          Your financial command centre is ready.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-blue-100/90">
+          Create an invoice or share your QR code to get your first confirmed payment.
+        </p>
+      </>
+    );
+  }
+
+  const top = data.sourceStats.sort((a, b) => b.amount - a.amount)[0];
+  const topLabel = top ? (SOURCE_CONFIG[top.source]?.label ?? top.source) : null;
+  const hasUnpaid = data.unpaidInvoiceCount > 0;
+  const hasPending = data.pendingAmount > 0;
+
+  const headline = topLabel
+    ? `${topLabel} is your top revenue channel.`
+    : "Payments are coming in — great start.";
+
+  const detail = hasUnpaid
+    ? `You have ${data.unpaidInvoiceCount} unpaid invoice${data.unpaidInvoiceCount > 1 ? "s" : ""} outstanding.${hasPending ? ` ₦${data.pendingAmount.toLocaleString("en-NG")} is awaiting webhook confirmation.` : ""}`
+    : hasPending
+    ? `₦${data.pendingAmount.toLocaleString("en-NG")} is awaiting webhook confirmation from Nomba.`
+    : `All ${data.paidCount} confirmed payment${data.paidCount > 1 ? "s" : ""} are reconciled. You're on track.`;
+
+  return (
+    <>
+      <p className="text-base font-bold leading-snug sm:text-lg">{headline}</p>
+      <p className="mt-2 text-sm leading-relaxed text-blue-100/90">{detail}</p>
+    </>
   );
 }
