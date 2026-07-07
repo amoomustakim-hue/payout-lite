@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 type NombaWebhookPayload = {
   event?: string;
   eventType?: string;
+  event_type?: string;
   id?: string;
   data?: Record<string, unknown>;
   reference?: string;
@@ -20,6 +21,12 @@ type NombaWebhookPayload = {
 function pickString(...values: unknown[]) {
   const value = values.find((item) => typeof item === "string" && item.length > 0);
   return typeof value === "string" ? value : undefined;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 function normalizeStatus(status?: string): TransactionStatus | null {
@@ -35,6 +42,31 @@ function normalizeStatus(status?: string): TransactionStatus | null {
   if (["failed", "declined", "cancelled", "canceled", "abandoned"].includes(value)) {
     return TransactionStatus.FAILED;
   }
+
+  return null;
+}
+
+/**
+ * Nomba checkout webhooks don't carry a flat `status` field — success is
+ * signalled by `event_type: "payment_success"` and/or the transaction
+ * `responseCode` of "00". Fall back to any explicit status string too.
+ */
+function deriveStatus(
+  eventType: string,
+  responseCode?: string,
+  providerStatus?: string,
+): TransactionStatus | null {
+  const explicit = normalizeStatus(providerStatus);
+  if (explicit) return explicit;
+
+  const evt = eventType.toLowerCase();
+  if (evt.includes("success")) return TransactionStatus.PAID;
+  if (evt.includes("fail") || evt.includes("declin") || evt.includes("revers") || evt.includes("cancel")) {
+    return TransactionStatus.FAILED;
+  }
+
+  if (responseCode === "00") return TransactionStatus.PAID;
+  if (responseCode && responseCode !== "00") return TransactionStatus.FAILED;
 
   return null;
 }
@@ -68,10 +100,32 @@ export async function POST(request: NextRequest) {
   }
 
   const db = getDb();
-  const data = payload.data ?? {};
-  const eventType = pickString(payload.event, payload.eventType, data.event, data.eventType) ?? "nomba.webhook";
-  const providerEventId = pickString(payload.id, data.id, data.eventId, data.transactionId, data.sessionId);
-  const paymentReference = pickString(
+  const data = asRecord(payload.data);
+  // Nomba nests the meaningful fields under data.transaction and data.order.
+  const txData = asRecord(data.transaction);
+  const orderData = asRecord(data.order);
+
+  const eventType =
+    pickString(payload.event, payload.eventType, payload.event_type, data.event, data.eventType) ??
+    "nomba.webhook";
+
+  const providerEventId = pickString(
+    payload.id,
+    data.id,
+    data.eventId,
+    txData.transactionId,
+    txData.sessionId,
+    orderData.orderId,
+    data.transactionId,
+    data.sessionId,
+  );
+
+  // Collect every reference Nomba might echo, across flat and nested shapes.
+  // `merchantTxRef` / `orderReference` are what we stored as reference / providerReference.
+  const referenceCandidates = [
+    txData.merchantTxRef,
+    orderData.orderReference,
+    txData.transactionId,
     payload.paymentReference,
     payload.reference,
     payload.orderReference,
@@ -80,16 +134,33 @@ export async function POST(request: NextRequest) {
     data.orderReference,
     data.merchantTxRef,
     data.transactionRef,
+    data.transactionId,
+  ].filter((v): v is string => typeof v === "string" && v.length > 0);
+
+  const paymentReference = referenceCandidates[0];
+
+  const responseCode = pickString(txData.responseCode, data.responseCode);
+  const providerStatus = pickString(
+    payload.status,
+    data.status,
+    data.paymentStatus,
+    data.transactionStatus,
+    txData.status,
   );
-  const providerStatus = pickString(payload.status, data.status, data.paymentStatus, data.transactionStatus);
-  const nextStatus = normalizeStatus(providerStatus);
-  const verification = nextStatus === TransactionStatus.PAID && paymentReference ? await verifySuccessfulPayment(paymentReference) : null;
+  const nextStatus = deriveStatus(eventType, responseCode, providerStatus);
+  const verification =
+    nextStatus === TransactionStatus.PAID && paymentReference
+      ? await verifySuccessfulPayment(paymentReference)
+      : null;
 
   const result = await db.$transaction(async (tx) => {
-    const transaction = paymentReference
+    const transaction = referenceCandidates.length
       ? await tx.transaction.findFirst({
           where: {
-            OR: [{ reference: paymentReference }, { providerReference: paymentReference }],
+            OR: referenceCandidates.flatMap((r) => [
+              { reference: r },
+              { providerReference: r },
+            ]),
           },
           include: { invoice: true },
         })
@@ -131,7 +202,17 @@ export async function POST(request: NextRequest) {
         where: { id: transaction.id },
         data: {
           status: nextStatus,
-          providerReference: pickString(data.providerReference, data.sessionId, data.transactionId, paymentReference),
+          providerReference:
+            transaction.providerReference ??
+            pickString(
+              txData.transactionId,
+              txData.sessionId,
+              orderData.orderReference,
+              data.providerReference,
+              data.sessionId,
+              data.transactionId,
+              paymentReference,
+            ),
           paidAt: nextStatus === TransactionStatus.PAID ? new Date() : transaction.paidAt,
           metadata: { payload, verification } as object,
         },
