@@ -1,4 +1,5 @@
-import { ArrowLeftRight } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeftRight, Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -73,7 +74,7 @@ export default async function TransactionsPage() {
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  {["Customer", "Source", "Amount", "Status", "Date"].map((h) => (
+                  {["Customer", "Source", "Amount", "Status", "Date", ""].map((h) => (
                     <th key={h} className="pb-3 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                       {h}
                     </th>
@@ -82,7 +83,7 @@ export default async function TransactionsPage() {
               </thead>
               <tbody>
                 {transactions.map((row) => (
-                  <tr key={row.id} className="border-b border-[var(--border)] last:border-0">
+                  <tr key={row.id} className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50/50">
                     <td className="py-3">
                       <div className="flex items-center gap-2.5">
                         <CustomerAvatar name={row.customerName ?? "?"} />
@@ -105,6 +106,15 @@ export default async function TransactionsPage() {
                     </td>
                     <td className="py-3 text-xs text-[var(--muted)]">
                       {formatRelative(row.createdAt)}
+                    </td>
+                    <td className="py-3">
+                      <Link
+                        href={`/transactions/${row.id}`}
+                        className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2.5 py-1 text-xs font-medium text-[var(--muted)] transition hover:border-[var(--payout-blue)] hover:text-[var(--payout-blue)]"
+                      >
+                        <Receipt size={11} />
+                        View receipt
+                      </Link>
                     </td>
                   </tr>
                 ))}
