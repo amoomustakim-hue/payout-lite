@@ -128,19 +128,19 @@ export function AppShell({
       )}
 
       {/* Main area */}
-      <div className="flex flex-1 flex-col lg:ml-[var(--sidebar-width)]">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden lg:ml-[var(--sidebar-width)]">
         {/* Topbar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--border)] bg-white px-5 py-3">
+        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-[var(--border)] bg-white px-4 py-3 sm:gap-3 sm:px-5">
           {/* Mobile menu button */}
           <button
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-slate-500 hover:bg-slate-50 lg:hidden"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] text-slate-500 hover:bg-slate-50 lg:hidden"
             onClick={() => setMobileNavOpen(true)}
           >
             <Menu size={16} />
           </button>
 
-          {/* Search */}
-          <div className="relative flex-1 max-w-sm">
+          {/* Search — hidden on the smallest screens, shrinks otherwise */}
+          <div className="relative hidden min-w-0 flex-1 max-w-sm sm:block">
             <Search
               size={15}
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -152,17 +152,17 @@ export function AppShell({
             />
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            {/* Business selector */}
-            {businessBadge}
+          <div className="ml-auto flex min-w-0 items-center gap-2">
+            {/* Business selector — hidden on mobile to save space */}
+            <div className="hidden sm:block">{businessBadge}</div>
 
-            {/* Create Invoice CTA */}
+            {/* Create Invoice CTA — icon only on mobile */}
             <Link
               href="/invoices#create-invoice"
-              className="flex items-center gap-1.5 rounded-lg bg-[var(--payout-blue)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--payout-blue-dark)]"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--payout-blue)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--payout-blue-dark)] sm:px-4"
             >
               <Plus size={15} />
-              Create Invoice
+              <span className="hidden sm:inline">Create Invoice</span>
             </Link>
 
             {/* User */}
