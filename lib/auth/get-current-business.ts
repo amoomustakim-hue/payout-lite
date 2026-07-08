@@ -47,12 +47,23 @@ export async function getCurrentBusiness(): Promise<CurrentBusiness | null> {
     });
   }
 
-  const business = await db.business.findFirst({
+  let business = await db.business.findFirst({
     where: { userId: user.id },
     orderBy: { createdAt: "asc" },
   });
 
   if (!business) return null;
+
+  // Backfill the Nomba sub-account id from the environment if the record was
+  // created before it was configured. Checkout orders must be tagged with the
+  // sub-account for the hackathon proxy to forward payment webhooks back to us.
+  const envSubAccount = process.env.NOMBA_SUB_ACCOUNT_ID?.trim();
+  if (envSubAccount && business.nombaSubAccountId !== envSubAccount) {
+    business = await db.business.update({
+      where: { id: business.id },
+      data: { nombaSubAccountId: envSubAccount },
+    });
+  }
 
   return {
     id: business.id,
