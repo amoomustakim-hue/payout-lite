@@ -10,6 +10,7 @@ type NombaWebhookPayload = {
   event?: string;
   eventType?: string;
   event_type?: string;
+  requestId?: string;
   id?: string;
   data?: Record<string, unknown>;
   reference?: string;
@@ -87,16 +88,10 @@ async function verifySuccessfulPayment(reference: string) {
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature =
-    request.headers.get("x-nomba-signature") ??
     request.headers.get("nomba-signature") ??
+    request.headers.get("x-nomba-signature") ??
     request.headers.get("x-signature");
-  const signatureValid = verifyNombaWebhook(rawBody, signature);
-
-  console.info("[nomba-webhook] received", {
-    bytes: rawBody.length,
-    hasSignature: Boolean(signature),
-    signatureValid,
-  });
+  const timestamp = request.headers.get("nomba-timestamp");
 
   let payload: NombaWebhookPayload;
   try {
@@ -111,10 +106,33 @@ export async function POST(request: NextRequest) {
   // Nomba nests the meaningful fields under data.transaction and data.order.
   const txData = asRecord(data.transaction);
   const orderData = asRecord(data.order);
+  const merchantData = asRecord(data.merchant);
 
   const eventType =
     pickString(payload.event, payload.eventType, payload.event_type, data.event, data.eventType) ??
     "nomba.webhook";
+
+  // Nomba signs a colon-delimited string of these fields (not the raw body).
+  const signatureValid = verifyNombaWebhook({
+    eventType: pickString(payload.event_type, payload.eventType, payload.event),
+    requestId: pickString(payload.requestId, (payload as Record<string, unknown>).request_id),
+    userId: pickString(merchantData.userId),
+    walletId: pickString(merchantData.walletId),
+    transactionId: pickString(txData.transactionId),
+    type: pickString(txData.type),
+    time: pickString(txData.time),
+    responseCode: pickString(txData.responseCode),
+    timestamp,
+    signature,
+  });
+
+  console.info("[nomba-webhook] received", {
+    bytes: rawBody.length,
+    hasSignature: Boolean(signature),
+    hasTimestamp: Boolean(timestamp),
+    signatureValid,
+    eventType,
+  });
 
   const providerEventId = pickString(
     payload.id,
