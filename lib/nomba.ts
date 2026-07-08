@@ -241,20 +241,62 @@ export async function fetchNombaTransaction(reference: string) {
   });
 }
 
-export function verifyNombaWebhook(rawBody: string, signature: string | null) {
+export type NombaSignatureFields = {
+  eventType?: string;
+  requestId?: string;
+  userId?: string;
+  walletId?: string;
+  transactionId?: string;
+  type?: string;
+  time?: string;
+  responseCode?: string;
+  timestamp?: string | null;
+  signature?: string | null;
+};
+
+/**
+ * Verifies a Nomba webhook signature.
+ *
+ * Per https://developer.nomba.com/docs/api-basics/webhook Nomba does NOT sign
+ * the raw request body. It signs a colon-delimited string of specific fields
+ * with HmacSHA256 and Base64-encodes the digest. The signature arrives in the
+ * `nomba-signature` header and the timestamp in the `nomba-timestamp` header.
+ *
+ *   base = eventType:requestId:userId:walletId:transactionId:type:time:responseCode:timestamp
+ *   signature = base64( HMAC_SHA256(signingKey, base) )
+ *
+ * `responseCode` is an empty string when it is null.
+ */
+export function verifyNombaWebhook(fields: NombaSignatureFields): boolean {
   const secret = process.env.NOMBA_WEBHOOK_SECRET;
-  if (!secret || !signature) {
+  if (!secret || !fields.signature) {
     return false;
   }
 
-  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
-  const normalizedSignature = signature.replace(/^sha256=/, "");
+  const responseCode =
+    !fields.responseCode || fields.responseCode === "null" ? "" : fields.responseCode;
 
-  if (expected.length !== normalizedSignature.length) {
+  const base = [
+    fields.eventType ?? "",
+    fields.requestId ?? "",
+    fields.userId ?? "",
+    fields.walletId ?? "",
+    fields.transactionId ?? "",
+    fields.type ?? "",
+    fields.time ?? "",
+    responseCode,
+    fields.timestamp ?? "",
+  ].join(":");
+
+  const expected = crypto.createHmac("sha256", secret).update(base).digest("base64");
+
+  const expectedBuf = Buffer.from(expected);
+  const providedBuf = Buffer.from(fields.signature);
+  if (expectedBuf.length !== providedBuf.length) {
     return false;
   }
 
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(normalizedSignature));
+  return crypto.timingSafeEqual(expectedBuf, providedBuf);
 }
 
 
