@@ -207,7 +207,7 @@ export default async function InvoicesPage({
 
       <div className="grid gap-5 xl:grid-cols-[400px_1fr]">
         {/* Create form */}
-        <Card className="h-fit">
+        <Card className="h-fit min-w-0">
           <div className="mb-4 flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-50 text-[var(--payout-blue)]">
               <FileText size={14} />
@@ -218,7 +218,7 @@ export default async function InvoicesPage({
         </Card>
 
         {/* Invoice list */}
-        <div className="flex flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-5">
           <Card>
             <div className="mb-4 flex items-center justify-between">
               <div>

@@ -35,7 +35,7 @@ export default async function WebsiteButtonPage() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         {/* Payment URL */}
-        <Card>
+        <Card className="min-w-0">
           <div className="mb-3 flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-50 text-[var(--payout-blue)]">
               <Globe size={14} />
@@ -43,7 +43,7 @@ export default async function WebsiteButtonPage() {
             <p className="font-semibold text-[var(--foreground)]">Your Payment URL</p>
           </div>
           <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-slate-50 px-3 py-3">
-            <p className="flex-1 truncate text-sm font-medium text-[var(--payout-blue)]">{payUrl}</p>
+            <p className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--payout-blue)]">{payUrl}</p>
             <a
               href={payUrl}
               target="_blank"
@@ -90,7 +90,7 @@ export default async function WebsiteButtonPage() {
         </Card>
 
         {/* HTML snippet */}
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           <Card>
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">

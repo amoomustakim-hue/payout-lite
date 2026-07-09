@@ -37,7 +37,7 @@ export default async function ShopQrPage() {
         </Card>
 
         {/* Details */}
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           <Card>
             <div className="mb-3 flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-50 text-[var(--payout-blue)]">
@@ -47,7 +47,7 @@ export default async function ShopQrPage() {
             </div>
             {business ? (
               <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-slate-50 px-3 py-3">
-                <p className="flex-1 truncate text-sm font-medium text-[var(--payout-blue)]">{shopUrl}</p>
+                <p className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--payout-blue)]">{shopUrl}</p>
                 <a href={shopUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-slate-400 hover:text-slate-600">
                   <ExternalLink size={14} />
                 </a>
