@@ -60,7 +60,7 @@ export function ShareInvoice({
           readOnly
           value={url}
           onFocus={(e) => e.currentTarget.select()}
-          className="flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none"
+          className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none"
         />
         <button
           type="button"
