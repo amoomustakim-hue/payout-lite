@@ -7,12 +7,14 @@ import {
   ArrowUpRight,
   AlertCircle,
 } from "lucide-react";
+import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { CustomerAvatar } from "@/components/ui/customer-avatar";
 import { formatNaira } from "@/lib/format";
+import { hasDatabaseUrl } from "@/lib/db";
 import { getCurrentBusiness } from "@/lib/auth/get-current-business";
 import { getDashboardData, EMPTY_DASHBOARD, type DashboardData, type SourceStat } from "@/lib/data/dashboard";
 import { sourceLabel } from "@/lib/presenters/source-label";
@@ -22,6 +24,14 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const business = await getCurrentBusiness();
+
+  // First-run gating: send users who haven't set up a business to onboarding.
+  // Only redirect when the DB is reachable, otherwise fall through to the
+  // "database not connected" state rather than looping.
+  if (hasDatabaseUrl() && (!business || !business.onboardingComplete)) {
+    redirect("/onboarding");
+  }
+
   const data = business ? await getDashboardData(business.id) : EMPTY_DASHBOARD;
 
   return (

@@ -27,6 +27,10 @@ export async function saveBusinessAction(
   const name = (formData.get("name") as string)?.trim();
   const email = (formData.get("email") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim();
+  const category = (formData.get("category") as string)?.trim();
+  const address = (formData.get("address") as string)?.trim();
+  const website = (formData.get("website") as string)?.trim();
+  const description = (formData.get("description") as string)?.trim();
 
   if (!name) return { error: "Business name is required." };
   if (!email) return { error: "Business email is required." };
@@ -74,6 +78,10 @@ export async function saveBusinessAction(
           name,
           email,
           phone: phone || null,
+          category: category || null,
+          address: address || null,
+          website: website || null,
+          description: description || null,
           slug: finalSlug,
           onboardingComplete: true,
         },
@@ -87,6 +95,10 @@ export async function saveBusinessAction(
           slug,
           email,
           phone: phone || null,
+          category: category || null,
+          address: address || null,
+          website: website || null,
+          description: description || null,
           onboardingComplete: true,
           nombaSubAccountId: process.env.NOMBA_SUB_ACCOUNT_ID || null,
         },

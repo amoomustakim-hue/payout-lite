@@ -1,4 +1,5 @@
 import "server-only";
+import type { Business } from "@prisma/client";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { getDb, hasDatabaseUrl } from "@/lib/db";
 import { makeUniqueSlug } from "@/lib/slugify";
@@ -10,9 +11,30 @@ export type CurrentBusiness = {
   email: string | null;
   phone: string | null;
   logoUrl: string | null;
+  category: string | null;
+  description: string | null;
+  address: string | null;
+  website: string | null;
   onboardingComplete: boolean;
   nombaSubAccountId: string | null;
 };
+
+function toCurrentBusiness(business: Business): CurrentBusiness {
+  return {
+    id: business.id,
+    name: business.name,
+    slug: business.slug,
+    email: business.email,
+    phone: business.phone,
+    logoUrl: business.logoUrl,
+    category: business.category,
+    description: business.description,
+    address: business.address,
+    website: business.website,
+    onboardingComplete: business.onboardingComplete,
+    nombaSubAccountId: business.nombaSubAccountId,
+  };
+}
 
 export async function getCurrentBusiness(): Promise<CurrentBusiness | null> {
   if (!hasDatabaseUrl()) return null;
@@ -65,16 +87,7 @@ export async function getCurrentBusiness(): Promise<CurrentBusiness | null> {
     });
   }
 
-  return {
-    id: business.id,
-    name: business.name,
-    slug: business.slug,
-    email: business.email,
-    phone: business.phone,
-    logoUrl: business.logoUrl,
-    onboardingComplete: business.onboardingComplete,
-    nombaSubAccountId: business.nombaSubAccountId,
-  };
+  return toCurrentBusiness(business);
 }
 
 export async function getOrCreateBusiness(): Promise<CurrentBusiness> {
@@ -125,14 +138,5 @@ export async function getOrCreateBusiness(): Promise<CurrentBusiness> {
     });
   }
 
-  return {
-    id: business.id,
-    name: business.name,
-    slug: business.slug,
-    email: business.email,
-    phone: business.phone,
-    logoUrl: business.logoUrl,
-    onboardingComplete: business.onboardingComplete,
-    nombaSubAccountId: business.nombaSubAccountId,
-  };
+  return toCurrentBusiness(business);
 }
