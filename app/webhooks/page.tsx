@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { hasDatabaseUrl } from "@/lib/db";
 import { formatNaira } from "@/lib/format";
 import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { requireOnboardedBusiness } from "@/lib/auth/require-onboarding";
 import { listWebhookEvents } from "@/lib/data/webhooks";
 import { sourceLabel } from "@/lib/presenters/source-label";
 import { formatRelative } from "@/lib/presenters/format-relative";
@@ -23,6 +24,7 @@ async function getEvents() {
 }
 
 export default async function WebhooksPage() {
+  await requireOnboardedBusiness();
   const events = await getEvents();
 
   const verified = events.filter((e) => e.signatureValid).length;

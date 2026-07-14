@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { hasDatabaseUrl } from "@/lib/db";
 import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { requireOnboardedBusiness } from "@/lib/auth/require-onboarding";
 import { getActiveVirtualAccount } from "@/lib/data/virtual-account";
 import { CreateVirtualAccountButton } from "@/components/unique-account/create-button";
 import { CopyAccountButton } from "@/components/unique-account/copy-account-button";
@@ -26,6 +27,7 @@ export default async function UniqueAccountPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
+  await requireOnboardedBusiness();
   const account = await getVirtualAccount();
   const copyText = account
     ? `Bank: ${account.bankName}\nAccount Number: ${account.accountNumber}\nAccount Name: ${account.accountName}`

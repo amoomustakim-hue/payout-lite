@@ -14,6 +14,7 @@ import { formatNaira } from "@/lib/format";
 import { getAppUrl } from "@/lib/app-url";
 import { hasDatabaseUrl } from "@/lib/db";
 import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { requireOnboardedBusiness } from "@/lib/auth/require-onboarding";
 import { listInvoices, type InvoiceRow } from "@/lib/data/invoices";
 import { invoiceNumber } from "@/lib/presenters/invoice-number";
 
@@ -157,6 +158,7 @@ export default async function InvoicesPage({
 }: {
   searchParams: Promise<{ created?: string }>;
 }) {
+  await requireOnboardedBusiness();
   const { invoices, databaseReady } = await getInvoices();
   const { created } = await searchParams;
   const createdInvoice = created ? invoices.find((inv) => inv.id === created) : undefined;

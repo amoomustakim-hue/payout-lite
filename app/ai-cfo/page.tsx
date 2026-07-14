@@ -1,7 +1,11 @@
 import { PageHeader } from "@/components/ui/page-header";
 import { AiCfoChat } from "@/components/ai-cfo/chat";
+import { requireOnboardedBusiness } from "@/lib/auth/require-onboarding";
 
-export default function AiCfoPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AiCfoPage() {
+  await requireOnboardedBusiness();
   return (
     <div>
       <PageHeader

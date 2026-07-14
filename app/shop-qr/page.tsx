@@ -3,11 +3,11 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAppUrl } from "@/lib/app-url";
 import { QrDisplay } from "@/components/shop-qr/qr-display";
-import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { requireOnboardedBusiness } from "@/lib/auth/require-onboarding";
 
 export default async function ShopQrPage() {
   const appUrl = getAppUrl();
-  const business = await getCurrentBusiness();
+  const business = await requireOnboardedBusiness();
   const shopUrl = business ? `${appUrl}/pay/shop/${business.slug}` : "";
   const businessName = business?.name ?? "My Shop";
 
