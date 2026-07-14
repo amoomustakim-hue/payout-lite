@@ -48,6 +48,10 @@ model Business {
   email                String?
   phone                String?
   logoUrl              String?
+  category             String?
+  description          String?
+  address              String?
+  website              String?
   onboardingComplete   Boolean          @default(false)
   nombaSubAccountId    String?
   createdAt            DateTime         @default(now())
