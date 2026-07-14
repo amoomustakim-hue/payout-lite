@@ -8,6 +8,7 @@ import { CustomerAvatar } from "@/components/ui/customer-avatar";
 import { formatNaira } from "@/lib/format";
 import { hasDatabaseUrl } from "@/lib/db";
 import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { requireOnboardedBusiness } from "@/lib/auth/require-onboarding";
 import { listTransactions } from "@/lib/data/transactions";
 import { sourceLabel } from "@/lib/presenters/source-label";
 import { formatRelative } from "@/lib/presenters/format-relative";
@@ -27,6 +28,7 @@ async function getTransactions() {
 }
 
 export default async function TransactionsPage() {
+  await requireOnboardedBusiness();
   const { transactions, databaseReady } = await getTransactions();
 
   return (

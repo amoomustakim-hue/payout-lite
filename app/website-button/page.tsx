@@ -3,12 +3,12 @@ import { CopySnippet } from "@/components/website-button/copy-snippet";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAppUrl } from "@/lib/app-url";
-import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { requireOnboardedBusiness } from "@/lib/auth/require-onboarding";
 
 export const dynamic = "force-dynamic";
 
 export default async function WebsiteButtonPage() {
-  const business = await getCurrentBusiness();
+  const business = await requireOnboardedBusiness();
   const slug = business?.slug ?? "my-business";
   const appUrl = getAppUrl();
   const payUrl = `${appUrl}/pay/button/${slug}`;

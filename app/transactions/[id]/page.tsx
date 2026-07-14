@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { formatNaira } from "@/lib/format";
 import { hasDatabaseUrl } from "@/lib/db";
 import { getCurrentBusiness } from "@/lib/auth/get-current-business";
+import { requireOnboardedBusiness } from "@/lib/auth/require-onboarding";
 import { getTransactionForBusiness } from "@/lib/data/transactions";
 import { sourceLabel } from "@/lib/presenters/source-label";
 
@@ -27,6 +28,7 @@ export default async function TransactionReceiptPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireOnboardedBusiness();
   const { id } = await params;
   const tx = await getReceipt(id);
 
